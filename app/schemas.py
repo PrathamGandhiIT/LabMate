@@ -77,14 +77,33 @@ class PracticalResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CodeLabRequest(BaseModel):
-    """Request for code explanation or debugging."""
-    code: str = Field(..., min_length=1, max_length=10000)
+    """Request for code analysis, explanation, debugging, or trace."""
+    code: str = Field(..., min_length=1, max_length=20000)
     language: str = Field(default="python", max_length=50)
-    mode: str = Field(..., pattern=r"^(explain|dryrun|debug|viva)$")
-    question: str | None = Field(None, max_length=2000)
+    mode: str = Field(..., pattern=r"^(explain|dryrun|debug|optimize|viva)$")
+    sample_input: str | None = Field(None, max_length=2000)
     error_message: str | None = Field(None, max_length=2000)
     expected_behavior: str | None = Field(None, max_length=2000)
-    actual_behavior: str | None = Field(None, max_length=2000)
+    additional_notes: str | None = Field(None, max_length=2000)
+
+
+class CodeSnippetCreate(BaseModel):
+    """Request to save a code snippet."""
+    title: str = Field(..., min_length=1, max_length=300)
+    language: str = Field(default="python", max_length=50)
+    code: str = Field(..., min_length=1, max_length=20000)
+    notes: str | None = Field(None, max_length=5000)
+
+
+class CodeSnippetResponse(BaseModel):
+    """Saved code snippet representation."""
+    id: int
+    title: str
+    language: str
+    code: str
+    notes: str | None = None
+    created_at: str
+    updated_at: str
 
 
 # ---------------------------------------------------------------------------

@@ -90,23 +90,17 @@ templates = Jinja2Templates(directory="app/templates")
 # Include routers
 # ---------------------------------------------------------------------------
 
-from app.routers import api, dashboard, practical  # noqa: E402
+from app.routers import api, codelab, dashboard, practical  # noqa: E402
 
 app.include_router(api.router)
 app.include_router(dashboard.router)
 app.include_router(practical.router)
+app.include_router(codelab.router)
 
 
 # ---------------------------------------------------------------------------
-# Stub page routes (Milestones 3-4 — placeholder pages for navigation)
+# Stub page routes (Milestone 4 — placeholder pages for navigation)
 # ---------------------------------------------------------------------------
-
-
-@app.get("/code-lab", response_class=HTMLResponse)
-async def code_lab_page(request: Request):
-    return templates.TemplateResponse(
-        request, "codelab.html", {"page": "code-lab"}
-    )
 
 
 @app.get("/viva-arena", response_class=HTMLResponse)

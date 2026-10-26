@@ -4,16 +4,710 @@
 
 {% block content %}
 <div class="page-header">
-  <h1 class="page-title">Code Lab</h1>
-  <p class="page-subtitle">Understand, debug, and analyse code with AI assistance.</p>
-</div>
-
-<div class="card">
-  <div class="empty-state">
-    <div class="empty-state__icon">⟨⟩</div>
-    <div class="empty-state__title">Code Lab</div>
-    <div class="empty-state__text">Code explanation, dry-run, debugging, and viva question generation are coming in Milestone 3.</div>
-    <span class="coming-soon__badge mt-md">🚧 Coming in Milestone 3</span>
+  <div class="flex items-center justify-between flex-wrap gap-md">
+    <div>
+      <h1 class="page-title">Code Lab</h1>
+      <p class="page-subtitle">Understand logic, dry-run variables, debug errors, and prepare for viva exams.</p>
+    </div>
+    <div class="flex gap-sm">
+      <button class="btn btn--secondary btn--sm" id="btn-open-snippets" onclick="openSnippetsModal()">
+        <span>📂</span> Saved Snippets (<span id="snippet-count">{{ snippets|length }}</span>)
+      </button>
+      <button class="btn btn--secondary btn--sm" id="btn-save-current" onclick="openSaveSnippetModal()">
+        <span>💾</span> Save Current
+      </button>
+    </div>
   </div>
 </div>
+
+<div class="codelab-grid">
+  <!-- Left Column: Code Editor & Controls -->
+  <div class="code-editor-card">
+    <div class="card" style="padding: 0; overflow: hidden;">
+      <!-- Editor Top Bar -->
+      <div class="code-editor-header">
+        <div class="flex items-center gap-sm">
+          <span style="font-size: 1.1rem;">💻</span>
+          <select id="code-language" class="form-select" style="width: auto; padding-top: 4px; padding-bottom: 4px; font-size: var(--text-xs);" onchange="onLanguageChange()">
+            <option value="python">Python</option>
+            <option value="c">C</option>
+            <option value="cpp">C++</option>
+            <option value="java">Java</option>
+            <option value="javascript">JavaScript</option>
+            <option value="sql">SQL</option>
+            <option value="csharp">C#</option>
+            <option value="go">Go</option>
+            <option value="rust">Rust</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-sm">
+          <!-- Preset selector -->
+          <select id="preset-select" class="form-select" style="width: auto; padding-top: 4px; padding-bottom: 4px; font-size: var(--text-xs);" onchange="loadPreset(this.value)">
+            <option value="">⚡ Load Preset Algorithm...</option>
+            {% for preset in presets %}
+              <option value="{{ preset.id }}">{{ preset.title }} ({{ preset.language|upper }})</option>
+            {% endfor %}
+          </select>
+
+          <button class="btn btn--secondary btn--sm" style="padding: 4px 8px;" onclick="clearCode()" title="Clear editor">
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Body with Line Numbers -->
+      <div class="code-editor-wrapper">
+        <div class="code-line-numbers" id="code-line-numbers">1</div>
+        <textarea
+          id="code-input"
+          class="code-textarea"
+          placeholder="Paste or write your programming code here...&#10;&#10;e.g. Data structures, algorithms, lab practical programs."
+          spellcheck="false"
+          oninput="updateLineNumbers()"
+          onscroll="syncScroll()"
+          onkeydown="handleEditorKeyDown(event)"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Mode Action Buttons -->
+    <div class="code-action-strip">
+      <button class="btn-mode btn-mode--explain active" id="btn-explain" onclick="runAnalysis('explain')">
+        <span>📘</span> Explain Code
+      </button>
+      <button class="btn-mode btn-mode--trace" id="btn-trace" onclick="runAnalysis('dryrun')">
+        <span>📊</span> Dry Run Trace
+      </button>
+      <button class="btn-mode btn-mode--debug" id="btn-debug" onclick="runAnalysis('debug')">
+        <span>🐞</span> Debug & Fix
+      </button>
+      <button class="btn-mode btn-mode--optimize" id="btn-optimize" onclick="runAnalysis('optimize')">
+        <span>⚡</span> Optimize
+      </button>
+      <button class="btn-mode btn-mode--viva" id="btn-viva" onclick="runAnalysis('viva')">
+        <span>🎯</span> Viva Questions
+      </button>
+    </div>
+
+    <!-- Expandable Context Inputs -->
+    <div class="context-panel mt-md">
+      <div class="context-panel-header" onclick="toggleContextPanel('panel-dryrun')">
+        <span>📥 Sample Input for Dry Run (Optional)</span>
+        <span id="arrow-panel-dryrun">▼</span>
+      </div>
+      <div class="context-panel-body" id="panel-dryrun">
+        <textarea
+          id="input-sample"
+          class="form-textarea"
+          style="min-height: 70px;"
+          placeholder="e.g. arr = [5, 1, 4, 2, 8] or target = 4"
+        ></textarea>
+        <span class="form-hint">Used by 'Dry Run Trace' to step through iterations line-by-line.</span>
+      </div>
+    </div>
+
+    <div class="context-panel">
+      <div class="context-panel-header" onclick="toggleContextPanel('panel-debug')">
+        <span>🐞 Error Log & Expected Output for Debugger (Optional)</span>
+        <span id="arrow-panel-debug">▼</span>
+      </div>
+      <div class="context-panel-body" id="panel-debug">
+        <div class="form-group mb-sm">
+          <label class="form-label" style="font-size: var(--text-xs);">Compiler / Runtime Error Message</label>
+          <textarea
+            id="input-error"
+            class="form-textarea"
+            style="min-height: 60px;"
+            placeholder="e.g. IndexError: list index out of range at line 14"
+          ></textarea>
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label" style="font-size: var(--text-xs);">Expected Behavior</label>
+          <input
+            type="text"
+            id="input-expected"
+            class="form-input"
+            placeholder="e.g. Should return the sorted array in ascending order"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="context-panel">
+      <div class="context-panel-header" onclick="toggleContextPanel('panel-notes')">
+        <span>💡 Additional Notes or Optimization Goals (Optional)</span>
+        <span id="arrow-panel-notes">▼</span>
+      </div>
+      <div class="context-panel-body" id="panel-notes">
+        <input
+          type="text"
+          id="input-notes"
+          class="form-input"
+          placeholder="e.g. Optimize for O(1) space or focus on recursion tree explanation"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: AI Analysis & Visualizations -->
+  <div class="results-card card">
+    <div class="results-header">
+      <div class="flex items-center gap-sm">
+        <span class="badge badge--lime" id="result-badge">Ready</span>
+        <span style="font-size: var(--text-xs); color: var(--text-muted);" id="result-meta">Select a mode and click analyze</span>
+      </div>
+      <div class="flex items-center gap-xs" id="result-actions" style="display: none;">
+        <button class="btn btn--secondary btn--sm" onclick="copyResultText()" title="Copy Markdown">
+          📋 Copy
+        </button>
+        <button class="btn btn--secondary btn--sm" onclick="downloadResultMarkdown()" title="Download as .md">
+          ⬇ Export .md
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="results-empty" class="empty-state" style="margin: auto;">
+      <div class="empty-state__icon">⟨/⟩</div>
+      <div class="empty-state__title">Code Analysis Studio</div>
+      <div class="empty-state__text">
+        Paste code on the left or load a preset, then choose an action:
+        <br><br>
+        <strong>Explain</strong> for algorithmic breakdown & Big-O<br>
+        <strong>Dry Run</strong> for iteration-by-iteration trace table<br>
+        <strong>Debug</strong> to fix syntax & edge cases<br>
+        <strong>Viva</strong> for targeted oral exam Q&A
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="results-loading" style="display: none; margin: auto; text-align: center; padding: var(--space-2xl) 0;">
+      <div class="spinner" style="width: 36px; height: 36px; margin: 0 auto var(--space-md); border-width: 3px;"></div>
+      <div style="font-weight: var(--weight-semibold); color: var(--text-primary); font-size: var(--text-md);" id="loading-title">
+        Analyzing Code with Gemini 3.6 Flash...
+      </div>
+      <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 6px;" id="loading-sub">
+        Deriving algorithmic invariants & complexity
+      </div>
+    </div>
+
+    <!-- Result Content Output -->
+    <div id="results-content" class="markdown-result" style="display: none;"></div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     MODAL: Save Current Snippet
+     =================================================================== -->
+<div class="snippets-modal" id="modal-save-snippet">
+  <div class="snippets-dialog">
+    <div class="snippets-dialog-header">
+      <h3 style="font-size: var(--text-md); margin: 0; font-weight: var(--weight-semibold);">Save Code Snippet</h3>
+      <button class="btn btn--secondary btn--sm" onclick="closeSaveSnippetModal()">✕</button>
+    </div>
+    <div class="snippets-dialog-body">
+      <div class="form-group">
+        <label class="form-label" for="save-snippet-title">Snippet Title *</label>
+        <input type="text" id="save-snippet-title" class="form-input" placeholder="e.g. Quick Sort with Median Pivot" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="save-snippet-notes">Notes / Observations (Optional)</label>
+        <textarea id="save-snippet-notes" class="form-textarea" style="min-height: 80px;" placeholder="e.g. Time complexity O(N log N), good for Lab Experiment #4"></textarea>
+      </div>
+      <div class="flex justify-end gap-sm mt-md">
+        <button class="btn btn--secondary btn--sm" onclick="closeSaveSnippetModal()">Cancel</button>
+        <button class="btn btn--primary btn--sm" onclick="submitSaveSnippet()">Save Snippet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     MODAL: Saved Snippets Library
+     =================================================================== -->
+<div class="snippets-modal" id="modal-list-snippets">
+  <div class="snippets-dialog">
+    <div class="snippets-dialog-header">
+      <h3 style="font-size: var(--text-md); margin: 0; font-weight: var(--weight-semibold);">Saved Snippets Library</h3>
+      <button class="btn btn--secondary btn--sm" onclick="closeSnippetsModal()">✕</button>
+    </div>
+    <div class="snippets-dialog-body">
+      <div id="saved-snippets-container">
+        {% if snippets %}
+          <div class="flex flex-col gap-sm">
+            {% for s in snippets %}
+              <div class="viva-item flex items-center justify-between" id="snippet-row-{{ s.id }}">
+                <div>
+                  <div style="font-weight: var(--weight-semibold); color: var(--text-primary); font-size: var(--text-sm);">
+                    {{ s.title }}
+                  </div>
+                  <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                    <span class="badge badge--sm badge--lime" style="font-size: 0.65rem;">{{ s.language|upper }}</span>
+                    • {{ s.updated_at.strftime('%b %d, %Y') if s.updated_at else '' }}
+                    {% if s.notes %} — {{ s.notes[:40] }}{% endif %}
+                  </div>
+                </div>
+                <div class="flex gap-xs">
+                  <button class="btn btn--primary btn--sm" onclick="loadSavedSnippet({{ s.id }})">
+                    Load
+                  </button>
+                  <button class="btn btn--danger btn--sm" onclick="deleteSavedSnippet({{ s.id }})">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state" style="padding: var(--space-xl) 0;">
+            <div class="empty-state__icon">📂</div>
+            <div class="empty-state__title">No Saved Snippets Yet</div>
+            <div class="empty-state__text">Write or load code in the editor, then click "Save Current" to store it here.</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Code Lab Studio Client Logic */
+'use strict';
+
+const PRESETS = {{ presets|tojson }};
+let currentMode = 'explain';
+let rawMarkdownResult = '';
+
+// On page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Load default preset if empty
+  const codeInput = document.getElementById('code-input');
+  if (!codeInput.value.trim() && PRESETS.length > 0) {
+    loadPreset(PRESETS[0].id);
+  } else {
+    updateLineNumbers();
+  }
+});
+
+// Update line numbers gutter
+function updateLineNumbers() {
+  const textarea = document.getElementById('code-input');
+  const gutter = document.getElementById('code-line-numbers');
+  const lineCount = (textarea.value.split('\n').length) || 1;
+  let nums = '';
+  for (let i = 1; i <= lineCount; i++) {
+    nums += i + '<br>';
+  }
+  gutter.innerHTML = nums;
+}
+
+// Sync vertical scrolling between gutter and textarea
+function syncScroll() {
+  const textarea = document.getElementById('code-input');
+  const gutter = document.getElementById('code-line-numbers');
+  gutter.scrollTop = textarea.scrollTop;
+}
+
+// Tab key indent support inside textarea
+function handleEditorKeyDown(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const textarea = e.target;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const spaces = '    ';
+    textarea.value = textarea.value.substring(0, start) + spaces + textarea.value.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + spaces.length;
+    updateLineNumbers();
+  }
+}
+
+// Clear editor
+function clearCode() {
+  if (!document.getElementById('code-input').value.trim() || confirm('Clear the code editor?')) {
+    document.getElementById('code-input').value = '';
+    document.getElementById('preset-select').value = '';
+    updateLineNumbers();
+  }
+}
+
+// Load preset algorithm
+function loadPreset(presetId) {
+  if (!presetId) return;
+  const p = PRESETS.find(item => item.id === presetId);
+  if (p) {
+    document.getElementById('code-input').value = p.code.trim();
+    document.getElementById('code-language').value = p.language;
+    document.getElementById('preset-select').value = presetId;
+    updateLineNumbers();
+    AIStatus.toast(`Loaded "${p.title}"`, 'info');
+  }
+}
+
+// Language change handler
+function onLanguageChange() {
+  document.getElementById('preset-select').value = '';
+}
+
+// Toggle collapsible context panels
+function toggleContextPanel(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById('arrow-' + id);
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    if (arrow) arrow.textContent = '▼';
+  } else {
+    body.classList.add('open');
+    if (arrow) arrow.textContent = '▲';
+  }
+}
+
+// Run Analysis
+async function runAnalysis(mode) {
+  const code = document.getElementById('code-input').value.trim();
+  if (!code) {
+    AIStatus.toast('Please enter or paste code first.', 'warning');
+    document.getElementById('code-input').focus();
+    return;
+  }
+
+  currentMode = mode;
+  // Update button active state
+  document.querySelectorAll('.btn-mode').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('btn-' + (mode === 'dryrun' ? 'trace' : mode));
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const language = document.getElementById('code-language').value;
+  const sampleInput = document.getElementById('input-sample').value.trim();
+  const errorMessage = document.getElementById('input-error').value.trim();
+  const expectedBehavior = document.getElementById('input-expected').value.trim();
+  const additionalNotes = document.getElementById('input-notes').value.trim();
+
+  // Show loading
+  const emptyEl = document.getElementById('results-empty');
+  const loadingEl = document.getElementById('results-loading');
+  const contentEl = document.getElementById('results-content');
+  const badgeEl = document.getElementById('result-badge');
+  const metaEl = document.getElementById('result-meta');
+  const actionsEl = document.getElementById('result-actions');
+
+  emptyEl.style.display = 'none';
+  contentEl.style.display = 'none';
+  loadingEl.style.display = 'block';
+  actionsEl.style.display = 'none';
+
+  const titles = {
+    explain: 'Explaining Code & Deriving Complexity...',
+    dryrun: 'Executing Dry Run & Building Trace Table...',
+    debug: 'Inspecting for Bugs, Syntax & Memory Leaks...',
+    optimize: 'Analyzing Algorithmic Efficiency & Big-O...',
+    viva: 'Generating Code-Specific Viva Voce Questions...'
+  };
+  document.getElementById('loading-title').textContent = titles[mode] || 'Processing with Gemini 3.6 Flash...';
+  badgeEl.className = 'badge badge--orange';
+  badgeEl.textContent = 'Thinking';
+  metaEl.textContent = `${language.toUpperCase()} • ${mode.toUpperCase()}`;
+
+  try {
+    const payload = {
+      code: code,
+      language: language,
+      mode: mode,
+      sample_input: sampleInput || null,
+      error_message: errorMessage || null,
+      expected_behavior: expectedBehavior || null,
+      additional_notes: additionalNotes || null
+    };
+
+    const resp = await fetch('/api/codelab/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || !data.success) {
+      throw new Error(data.detail || 'Analysis request failed');
+    }
+
+    rawMarkdownResult = data.data.content;
+    renderMarkdownResult(rawMarkdownResult);
+
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+    actionsEl.style.display = 'flex';
+    badgeEl.className = 'badge badge--lime';
+    badgeEl.textContent = 'Completed';
+    metaEl.textContent = `${language.toUpperCase()} • ${mode.toUpperCase()} generated`;
+    AIStatus.toast(`Analysis ready!`, 'success');
+  } catch (err) {
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'flex';
+    badgeEl.className = 'badge badge--danger';
+    badgeEl.textContent = 'Error';
+    metaEl.textContent = err.message;
+    AIStatus.toast(`Failed: ${err.message}`, 'error');
+  }
+}
+
+// Markdown renderer for results
+function renderMarkdownResult(md) {
+  const container = document.getElementById('results-content');
+  if (!md) {
+    container.innerHTML = '<p class="text-muted">No content produced.</p>';
+    return;
+  }
+
+  // Sanitize basic HTML chars
+  let html = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Code blocks: ```lang ... ```
+  html = html.replace(/```([a-zA-Z0-9_\-\+]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    return `<div class="code-box my-sm"><div class="code-box-header"><span>${lang || 'code'}</span><button class="btn btn--secondary btn--sm" style="padding: 2px 6px;" onclick="copyCodeSnippet(this)">Copy</button></div><pre><code>${code.trim()}</code></pre></div>`;
+  });
+
+  // Inline code: `...`
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Headings
+  html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+  // Bold & Italics
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  // Tables
+  html = renderMarkdownTables(html);
+
+  // Unordered lists
+  html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+  // Paragraphs
+  html = html.split('\n\n').map(chunk => {
+    chunk = chunk.trim();
+    if (!chunk) return '';
+    if (chunk.startsWith('<h') || chunk.startsWith('<div') || chunk.startsWith('<ul') || chunk.startsWith('<table')) {
+      return chunk;
+    }
+    return `<p>${chunk.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+// Simple markdown table parser
+function renderMarkdownTables(text) {
+  const lines = text.split('\n');
+  let inTable = false;
+  let tableLines = [];
+  let outLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('|') && line.endsWith('|')) {
+      inTable = true;
+      tableLines.push(line);
+    } else {
+      if (inTable) {
+        outLines.push(convertTableToHtml(tableLines));
+        tableLines = [];
+        inTable = false;
+      }
+      outLines.push(lines[i]);
+    }
+  }
+  if (inTable) {
+    outLines.push(convertTableToHtml(tableLines));
+  }
+  return outLines.join('\n');
+}
+
+function convertTableToHtml(rows) {
+  if (rows.length < 2) return rows.join('\n');
+  const headerCells = rows[0].split('|').slice(1, -1).map(c => `<th>${c.trim()}</th>`).join('');
+  let bodyHtml = '';
+
+  for (let r = 2; r < rows.length; r++) {
+    const cells = rows[r].split('|').slice(1, -1).map(c => `<td>${c.trim()}</td>`).join('');
+    bodyHtml += `<tr>${cells}</tr>`;
+  }
+  return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+}
+
+// Copy rendered code snippet inside block
+function copyCodeSnippet(btn) {
+  const pre = btn.closest('.code-box').querySelector('pre code');
+  if (pre) {
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+}
+
+// Copy full markdown result
+function copyResultText() {
+  if (!rawMarkdownResult) return;
+  navigator.clipboard.writeText(rawMarkdownResult).then(() => {
+    AIStatus.toast('Full analysis copied to clipboard!', 'success');
+  });
+}
+
+// Download markdown file
+function downloadResultMarkdown() {
+  if (!rawMarkdownResult) return;
+  const lang = document.getElementById('code-language').value;
+  const filename = `codelab_${lang}_${currentMode}_${Date.now()}.md`;
+  const blob = new Blob([rawMarkdownResult], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  AIStatus.toast(`Downloaded ${filename}`, 'info');
+}
+
+// Modal controls: Save snippet
+function openSaveSnippetModal() {
+  const code = document.getElementById('code-input').value.trim();
+  if (!code) {
+    AIStatus.toast('Editor is empty. Write or paste code first.', 'warning');
+    return;
+  }
+  document.getElementById('modal-save-snippet').classList.add('open');
+  document.getElementById('save-snippet-title').focus();
+}
+
+function closeSaveSnippetModal() {
+  document.getElementById('modal-save-snippet').classList.remove('open');
+  document.getElementById('save-snippet-title').value = '';
+  document.getElementById('save-snippet-notes').value = '';
+}
+
+async function submitSaveSnippet() {
+  const title = document.getElementById('save-snippet-title').value.trim();
+  const notes = document.getElementById('save-snippet-notes').value.trim();
+  const code = document.getElementById('code-input').value.trim();
+  const language = document.getElementById('code-language').value;
+
+  if (!title) {
+    AIStatus.toast('Please enter a snippet title', 'warning');
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/codelab/snippets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, language, code, notes: notes || null })
+    });
+    if (!resp.ok) throw new Error('Failed to save snippet');
+    const saved = await resp.json();
+    closeSaveSnippetModal();
+    AIStatus.toast(`Saved snippet "${saved.title}"!`, 'success');
+    refreshSnippetsList();
+  } catch (err) {
+    AIStatus.toast(err.message, 'error');
+  }
+}
+
+// Modal controls: List snippets
+function openSnippetsModal() {
+  refreshSnippetsList();
+  document.getElementById('modal-list-snippets').classList.add('open');
+}
+
+function closeSnippetsModal() {
+  document.getElementById('modal-list-snippets').classList.remove('open');
+}
+
+async function refreshSnippetsList() {
+  try {
+    const resp = await fetch('/api/codelab/snippets');
+    const data = await resp.json();
+    const countEl = document.getElementById('snippet-count');
+    const container = document.getElementById('saved-snippets-container');
+
+    if (data.snippets && data.snippets.length > 0) {
+      if (countEl) countEl.textContent = data.snippets.length;
+      container.innerHTML = `
+        <div class="flex flex-col gap-sm">
+          ${data.snippets.map(s => `
+            <div class="viva-item flex items-center justify-between" id="snippet-row-${s.id}">
+              <div>
+                <div style="font-weight: var(--weight-semibold); color: var(--text-primary); font-size: var(--text-sm);">
+                  ${s.title}
+                </div>
+                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
+                  <span class="badge badge--sm badge--lime" style="font-size: 0.65rem;">${s.language.toUpperCase()}</span>
+                  ${s.notes ? ` • ${s.notes.substring(0, 40)}` : ''}
+                </div>
+              </div>
+              <div class="flex gap-xs">
+                <button class="btn btn--primary btn--sm" onclick="loadSavedSnippet(${s.id})">Load</button>
+                <button class="btn btn--danger btn--sm" onclick="deleteSavedSnippet(${s.id})">Delete</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      if (countEl) countEl.textContent = '0';
+      container.innerHTML = `
+        <div class="empty-state" style="padding: var(--space-xl) 0;">
+          <div class="empty-state__icon">📂</div>
+          <div class="empty-state__title">No Saved Snippets Yet</div>
+          <div class="empty-state__text">Write or load code in the editor, then click "Save Current" to store it here.</div>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error('Failed to load snippets', err);
+  }
+}
+
+async function loadSavedSnippet(id) {
+  try {
+    const resp = await fetch(`/api/codelab/snippets/${id}`);
+    if (!resp.ok) throw new Error('Failed to fetch snippet');
+    const s = await resp.json();
+    document.getElementById('code-input').value = s.code;
+    document.getElementById('code-language').value = s.language;
+    document.getElementById('preset-select').value = '';
+    updateLineNumbers();
+    closeSnippetsModal();
+    AIStatus.toast(`Loaded snippet "${s.title}"`, 'success');
+  } catch (err) {
+    AIStatus.toast(err.message, 'error');
+  }
+}
+
+async function deleteSavedSnippet(id) {
+  if (!confirm('Are you sure you want to delete this snippet?')) return;
+  try {
+    const resp = await fetch(`/api/codelab/snippets/${id}`, { method: 'DELETE' });
+    if (!resp.ok) throw new Error('Failed to delete snippet');
+    const row = document.getElementById(`snippet-row-${id}`);
+    if (row) row.remove();
+    AIStatus.toast('Snippet deleted', 'info');
+    refreshSnippetsList();
+  } catch (err) {
+    AIStatus.toast(err.message, 'error');
+  }
+}
+</script>
 {% endblock %}

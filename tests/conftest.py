@@ -6,6 +6,34 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from app.database import Base
+
+
+@pytest.fixture(autouse=True)
+def setup_test_db(monkeypatch):
+    """Use an isolated in-memory SQLite database for all tests."""
+    test_engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=test_engine)
+    test_session_factory = sessionmaker(bind=test_engine)
+
+    import app.main
+    monkeypatch.setattr(app.main, "create_db_engine", lambda: test_engine)
+    monkeypatch.setattr(app.main, "get_session_factory", lambda eng: test_session_factory)
+
+    from app.main import app
+    app.state.db_engine = test_engine
+    app.state.db_session_factory = test_session_factory
+    yield
+    test_engine.dispose()
+
+
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI app."""

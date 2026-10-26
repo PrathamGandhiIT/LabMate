@@ -55,6 +55,24 @@ class Practical(Base):
         return f"<Practical id={self.id} subject='{self.subject}' title='{self.title[:30]}'>"
 
 
+class CodeSnippet(Base):
+    """
+    A saved code snippet in Code Lab.
+    """
+    __tablename__ = "code_snippets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    language = Column(String(50), nullable=False, default="python")
+    code = Column(Text, nullable=False)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<CodeSnippet id={self.id} title='{self.title[:30]}' lang='{self.language}'>"
+
+
 # ---------------------------------------------------------------------------
 # Engine and session setup
 # ---------------------------------------------------------------------------

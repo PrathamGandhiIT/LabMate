@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)
 ![Google Gemini](https://img.shields.io/badge/Google%20Gemini-3.6%20Flash-4285F4.svg?style=for-the-badge&logo=google&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg?style=for-the-badge&logo=sqlite&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-24%20Passing-success.svg?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-34%20Passing-success.svg?style=for-the-badge&logo=pytest&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)
 
 <p align="center">
@@ -40,10 +40,13 @@
 - **Persistent Storage**: Save, browse, update, and manage practicals with local SQLite storage.
 - **Export Options**: Export files directly to clean Markdown / Plain Text for submission.
 
-### 💻 Code Lab (Milestone 3 🚧)
-- **Deep Code Analysis**: Line-by-line breakdown of logic, algorithms, and complexity.
-- **Automated Bug Fixing**: Identify syntax, logic, and runtime errors with instant explanations.
-- **Dry Run & Trace**: Step through variable states across execution cycles.
+### 💻 Code Lab (Completed ✅)
+- **Deep Code Analysis**: Line-by-line breakdown of logic, algorithms, and formal Time & Space Complexity derivations.
+- **Step-by-Step Dry Run Trace**: Interactive iteration trace tables tracking variable states, conditions, and console output.
+- **Automated Bug Fixing**: Identify syntax errors, logic flaws, memory leaks, and boundary bugs with ready-to-run fixes.
+- **Code Optimization**: Algorithmic refactoring with side-by-side Big-O comparison tables.
+- **Code-Specific Viva Prep**: Tailored viva questions with ideal answers and examiner traps to avoid.
+- **Snippet Library**: Save, load, and manage code snippets locally with SQLite persistence.
 
 ### 🎯 Viva Arena (Milestone 4 🚧)
 - **Viva Question Generator**: Tailored oral exam questions across basic, intermediate, and tricky edge-case categories.
@@ -57,10 +60,10 @@
 |---|:---:|---|
 | **System Dashboard & AI Heartbeat** | ✅ Complete | Real-time connection checks to Gemini API & models |
 | **Practical Studio CRUD** | ✅ Complete | Full generation, custom section regeneration, persistence |
+| **Code Lab Workbench** | ✅ Complete | Explain, dry-run trace table, debug & fix, optimize, viva & snippets |
 | **SQLite ORM Backend** | ✅ Complete | Async SQLAlchemy 2.0 with clean migrations |
 | **Vanilla Design System** | ✅ Complete | Responsive dark-mode glassmorphism interface |
-| **Automated Test Suite** | ✅ Complete | 24 Pytest unit & integration tests passing |
-| **Code Lab** | 🚧 Planned | Code explanation, complexity analysis & debugging |
+| **Automated Test Suite** | ✅ Complete | 34 Pytest unit & integration tests passing |
 | **Viva Arena** | 🚧 Planned | Interactive oral exam prep simulator |
 
 ---
@@ -221,7 +224,7 @@ Google AI Studio provides a free tier suitable for student workloads:
 - [x] Phase 1: Core Architecture, SQLite persistence, and UI Design System
 - [x] Phase 2: Practical Studio with AI generation, live editing, and section regeneration
 - [x] Phase 2.5: Google Gemini 3.6 Flash migration (zero local GPU overhead)
-- [ ] Phase 3: Code Lab — Code execution tracing, complexity visualizer & bug resolver
+- [x] Phase 3: Code Lab — Code execution tracing, complexity visualizer, bug resolver & snippet library
 - [ ] Phase 4: Viva Arena — Voice/text interactive oral viva interrogation
 - [ ] Phase 5: PDF/DOCX formatted laboratory journal export
 
