@@ -35,8 +35,9 @@ class CodeLabService:
         try:
             raw_response = await self.gemini.chat(
                 messages=[{"role": "user", "content": prompt}],
-                system_instruction=system_instruction,
+                system_prompt=system_instruction,
                 temperature=0.2,  # Low temperature for technical precision
+                max_tokens=4096,
             )
             return {
                 "mode": req.mode,

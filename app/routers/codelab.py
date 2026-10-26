@@ -183,6 +183,69 @@ public class Solution {
         return prev;
     }
 }"""
+    },
+    {
+        "id": "py-two-sum",
+        "title": "Two Sum (Hash Map O(N))",
+        "language": "python",
+        "category": "Arrays",
+        "code": """def two_sum(nums: list[int], target: int) -> list[int]:
+    lookup = {}
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in lookup:
+            return [lookup[complement], i]
+        lookup[num] = i
+    return []
+
+# Example Test Case:
+if __name__ == "__main__":
+    arr = [2, 7, 11, 15]
+    t = 9
+    print("Indices:", two_sum(arr, t))  # Output: [0, 1]"""
+    },
+    {
+        "id": "cpp-dijkstra",
+        "title": "Dijkstra's Shortest Path",
+        "language": "cpp",
+        "category": "Graphs",
+        "code": """#include <iostream>
+#include <vector>
+#include <queue>
+
+using namespace std;
+
+typedef pair<int, int> pii; // {weight, node}
+
+void dijkstra(int src, int V, const vector<vector<pii>>& adj) {
+    priority_queue<pii, vector<pii>, greater<pii>> pq;
+    vector<int> dist(V, 1e9);
+
+    dist[src] = 0;
+    pq.push({0, src});
+
+    while (!pq.empty()) {
+        int d = pq.top().first;
+        int u = pq.top().second;
+        pq.pop();
+
+        if (d > dist[u]) continue;
+
+        for (auto& edge : adj[u]) {
+            int v = edge.first;
+            int weight = edge.second;
+            if (dist[u] + weight < dist[v]) {
+                dist[v] = dist[u] + weight;
+                pq.push({dist[v], v});
+            }
+        }
+    }
+
+    cout << "Shortest distances from node " << src << ":\\n";
+    for (int i = 0; i < V; i++) {
+        cout << "Node " << i << " -> " << dist[i] << "\\n";
+    }
+}"""
     }
 ]
 

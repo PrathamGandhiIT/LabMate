@@ -7,67 +7,106 @@
   <div class="flex items-center justify-between flex-wrap gap-md">
     <div>
       <h1 class="page-title">Code Lab</h1>
-      <p class="page-subtitle">Understand logic, dry-run variables, debug errors, and prepare for viva exams.</p>
+      <p class="page-subtitle">Understand algorithms, step-by-step dry run, debug bugs, and simulate viva exams.</p>
     </div>
     <div class="flex gap-sm">
       <button class="btn btn--secondary btn--sm" id="btn-open-snippets" onclick="openSnippetsModal()">
         <span>📂</span> Saved Snippets (<span id="snippet-count">{{ snippets|length }}</span>)
       </button>
       <button class="btn btn--secondary btn--sm" id="btn-save-current" onclick="openSaveSnippetModal()">
-        <span>💾</span> Save Current
+        <span>💾</span> Save Snippet
       </button>
     </div>
   </div>
 </div>
 
+<!-- Preset Quick Chips -->
+<div class="preset-chips-scroll" id="preset-chips-bar">
+  <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: var(--weight-medium); padding-right: 4px;">
+    Presets:
+  </span>
+  {% for preset in presets %}
+    <button class="preset-chip" onclick="loadPreset('{{ preset.id }}')" id="chip-{{ preset.id }}">
+      <span>⚡</span> {{ preset.title }} <small style="opacity: 0.7;">({{ preset.language|upper }})</small>
+    </button>
+  {% endfor %}
+</div>
+
 <div class="codelab-grid">
-  <!-- Left Column: Code Editor & Controls -->
+  <!-- Left Column: Professional Code Workbench -->
   <div class="code-editor-card">
-    <div class="card" style="padding: 0; overflow: hidden;">
-      <!-- Editor Top Bar -->
-      <div class="code-editor-header">
-        <div class="flex items-center gap-sm">
-          <span style="font-size: 1.1rem;">💻</span>
-          <select id="code-language" class="form-select" style="width: auto; padding-top: 4px; padding-bottom: 4px; font-size: var(--text-xs);" onchange="onLanguageChange()">
-            <option value="python">Python</option>
-            <option value="c">C</option>
-            <option value="cpp">C++</option>
-            <option value="java">Java</option>
-            <option value="javascript">JavaScript</option>
-            <option value="sql">SQL</option>
-            <option value="csharp">C#</option>
-            <option value="go">Go</option>
-            <option value="rust">Rust</option>
-          </select>
+    <div class="ide-window" id="ide-window">
+      <!-- IDE Header Tab Bar -->
+      <div class="ide-header">
+        <div class="ide-tabs">
+          <div class="ide-tab">
+            <span class="ide-tab-icon" id="ide-file-icon">🐍</span>
+            <span id="ide-file-name">main.py</span>
+            <select id="code-language" class="form-select" style="width: auto; padding: 2px 20px 2px 8px; font-size: 0.7rem; height: 22px; margin-left: 8px; border-color: transparent; background-color: #141724;" onchange="onLanguageChange()">
+              <option value="python">Python</option>
+              <option value="c">C (C99/C11)</option>
+              <option value="cpp">C++ (C++17)</option>
+              <option value="java">Java (JDK 17+)</option>
+              <option value="javascript">JavaScript</option>
+              <option value="sql">SQL</option>
+              <option value="csharp">C#</option>
+              <option value="go">Go</option>
+              <option value="rust">Rust</option>
+            </select>
+          </div>
         </div>
 
-        <div class="flex items-center gap-sm">
-          <!-- Preset selector -->
-          <select id="preset-select" class="form-select" style="width: auto; padding-top: 4px; padding-bottom: 4px; font-size: var(--text-xs);" onchange="loadPreset(this.value)">
-            <option value="">⚡ Load Preset Algorithm...</option>
-            {% for preset in presets %}
-              <option value="{{ preset.id }}">{{ preset.title }} ({{ preset.language|upper }})</option>
-            {% endfor %}
-          </select>
-
-          <button class="btn btn--secondary btn--sm" style="padding: 4px 8px;" onclick="clearCode()" title="Clear editor">
-            ✕ Clear
+        <div class="ide-actions">
+          <button class="ide-btn" onclick="pasteFromClipboard()" title="Paste from clipboard">
+            📋 Paste
+          </button>
+          <button class="ide-btn" id="btn-toggle-wrap" onclick="toggleWordWrap()" title="Toggle word wrap">
+            🔠 Wrap: Off
+          </button>
+          <button class="ide-btn" onclick="clearCode()" title="Clear editor">
+            🧹 Clear
+          </button>
+          <button class="ide-btn" onclick="toggleFullscreen()" id="btn-fullscreen" title="Toggle Fullscreen">
+            ⛶
           </button>
         </div>
       </div>
 
-      <!-- Editor Body with Line Numbers -->
-      <div class="code-editor-wrapper">
-        <div class="code-line-numbers" id="code-line-numbers">1</div>
+      <!-- IDE Editor Body -->
+      <div class="ide-body">
+        <div class="ide-gutter" id="ide-gutter">
+          <span class="gutter-num active">1</span>
+        </div>
         <textarea
           id="code-input"
-          class="code-textarea"
-          placeholder="Paste or write your programming code here...&#10;&#10;e.g. Data structures, algorithms, lab practical programs."
+          class="ide-textarea"
+          placeholder="// Paste or write your programming code here...&#10;// Supports C, C++, Java, Python, and more."
           spellcheck="false"
-          oninput="updateLineNumbers()"
+          autocapitalize="off"
+          autocomplete="off"
+          oninput="handleEditorInput()"
           onscroll="syncScroll()"
+          onclick="updateCursorPos()"
+          onkeyup="updateCursorPos()"
           onkeydown="handleEditorKeyDown(event)"
         ></textarea>
+      </div>
+
+      <!-- IDE Footer Status Bar -->
+      <div class="ide-footer">
+        <div class="ide-footer-item">
+          <span class="ide-status-dot"></span>
+          <span id="ide-cursor-pos">Ln 1, Col 1</span>
+          <span>•</span>
+          <span id="ide-stats">0 lines • 0 chars</span>
+        </div>
+        <div class="ide-footer-item">
+          <span id="ide-lang-display">Python 3</span>
+          <span>•</span>
+          <span>Spaces: 4</span>
+          <span>•</span>
+          <span>UTF-8</span>
+        </div>
       </div>
     </div>
 
@@ -100,35 +139,35 @@
         <textarea
           id="input-sample"
           class="form-textarea"
-          style="min-height: 70px;"
-          placeholder="e.g. arr = [5, 1, 4, 2, 8] or target = 4"
+          style="min-height: 65px;"
+          placeholder="e.g. arr = [64, 34, 25, 12, 22, 11, 90] or target = 23"
         ></textarea>
-        <span class="form-hint">Used by 'Dry Run Trace' to step through iterations line-by-line.</span>
+        <span class="form-hint">Used by 'Dry Run Trace' to construct step-by-step variable trace tables.</span>
       </div>
     </div>
 
     <div class="context-panel">
       <div class="context-panel-header" onclick="toggleContextPanel('panel-debug')">
-        <span>🐞 Error Log & Expected Output for Debugger (Optional)</span>
+        <span>🐞 Compiler Error Log & Expected Output (Optional)</span>
         <span id="arrow-panel-debug">▼</span>
       </div>
       <div class="context-panel-body" id="panel-debug">
         <div class="form-group mb-sm">
-          <label class="form-label" style="font-size: var(--text-xs);">Compiler / Runtime Error Message</label>
+          <label class="form-label" style="font-size: var(--text-xs);">Compiler or Runtime Error Message</label>
           <textarea
             id="input-error"
             class="form-textarea"
             style="min-height: 60px;"
-            placeholder="e.g. IndexError: list index out of range at line 14"
+            placeholder="e.g. segmentation fault (core dumped) or IndexError: list index out of range"
           ></textarea>
         </div>
         <div class="form-group mb-0">
-          <label class="form-label" style="font-size: var(--text-xs);">Expected Behavior</label>
+          <label class="form-label" style="font-size: var(--text-xs);">Expected Program Behavior</label>
           <input
             type="text"
             id="input-expected"
             class="form-input"
-            placeholder="e.g. Should return the sorted array in ascending order"
+            placeholder="e.g. Should return the minimum elements without crashes"
           />
         </div>
       </div>
@@ -136,7 +175,7 @@
 
     <div class="context-panel">
       <div class="context-panel-header" onclick="toggleContextPanel('panel-notes')">
-        <span>💡 Additional Notes or Optimization Goals (Optional)</span>
+        <span>💡 Custom Optimization Goals or Invariants (Optional)</span>
         <span id="arrow-panel-notes">▼</span>
       </div>
       <div class="context-panel-body" id="panel-notes">
@@ -144,18 +183,18 @@
           type="text"
           id="input-notes"
           class="form-input"
-          placeholder="e.g. Optimize for O(1) space or focus on recursion tree explanation"
+          placeholder="e.g. Aim for O(1) auxiliary space or explain recursion call stack"
         />
       </div>
     </div>
   </div>
 
-  <!-- Right Column: AI Analysis & Visualizations -->
+  <!-- Right Column: AI Analysis Output -->
   <div class="results-card card">
     <div class="results-header">
       <div class="flex items-center gap-sm">
         <span class="badge badge--lime" id="result-badge">Ready</span>
-        <span style="font-size: var(--text-xs); color: var(--text-muted);" id="result-meta">Select a mode and click analyze</span>
+        <span style="font-size: var(--text-xs); color: var(--text-muted);" id="result-meta">Select a mode and analyze</span>
       </div>
       <div class="flex items-center gap-xs" id="result-actions" style="display: none;">
         <button class="btn btn--secondary btn--sm" onclick="copyResultText()" title="Copy Markdown">
@@ -170,25 +209,26 @@
     <!-- Empty State -->
     <div id="results-empty" class="empty-state" style="margin: auto;">
       <div class="empty-state__icon">⟨/⟩</div>
-      <div class="empty-state__title">Code Analysis Studio</div>
+      <div class="empty-state__title">Code Lab Studio Ready</div>
       <div class="empty-state__text">
-        Paste code on the left or load a preset, then choose an action:
+        Choose a preset chip or paste code, then click an action:
         <br><br>
-        <strong>Explain</strong> for algorithmic breakdown & Big-O<br>
-        <strong>Dry Run</strong> for iteration-by-iteration trace table<br>
-        <strong>Debug</strong> to fix syntax & edge cases<br>
-        <strong>Viva</strong> for targeted oral exam Q&A
+        <strong>Explain</strong>: Algorithmic breakdown & Big-O<br>
+        <strong>Dry Run</strong>: Iteration-by-iteration trace table<br>
+        <strong>Debug</strong>: Root-cause diagnosis & clean fix<br>
+        <strong>Optimize</strong>: Big-O reduction & refactored code<br>
+        <strong>Viva</strong>: Oral examination preparation
       </div>
     </div>
 
     <!-- Loading State -->
     <div id="results-loading" style="display: none; margin: auto; text-align: center; padding: var(--space-2xl) 0;">
-      <div class="spinner" style="width: 36px; height: 36px; margin: 0 auto var(--space-md); border-width: 3px;"></div>
+      <div class="spinner" style="width: 38px; height: 38px; margin: 0 auto var(--space-md); border-width: 3px;"></div>
       <div style="font-weight: var(--weight-semibold); color: var(--text-primary); font-size: var(--text-md);" id="loading-title">
-        Analyzing Code with Gemini 3.6 Flash...
+        Processing with Gemini 3.6 Flash...
       </div>
       <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 6px;" id="loading-sub">
-        Deriving algorithmic invariants & complexity
+        Analyzing syntax, logic, and complexity
       </div>
     </div>
 
@@ -209,11 +249,11 @@
     <div class="snippets-dialog-body">
       <div class="form-group">
         <label class="form-label" for="save-snippet-title">Snippet Title *</label>
-        <input type="text" id="save-snippet-title" class="form-input" placeholder="e.g. Quick Sort with Median Pivot" required />
+        <input type="text" id="save-snippet-title" class="form-input" placeholder="e.g. Binary Search Tree Insertion" required />
       </div>
       <div class="form-group">
         <label class="form-label" for="save-snippet-notes">Notes / Observations (Optional)</label>
-        <textarea id="save-snippet-notes" class="form-textarea" style="min-height: 80px;" placeholder="e.g. Time complexity O(N log N), good for Lab Experiment #4"></textarea>
+        <textarea id="save-snippet-notes" class="form-textarea" style="min-height: 80px;" placeholder="e.g. Time complexity O(H), helpful for Lab Practical #5"></textarea>
       </div>
       <div class="flex justify-end gap-sm mt-md">
         <button class="btn btn--secondary btn--sm" onclick="closeSaveSnippetModal()">Cancel</button>
@@ -245,16 +285,12 @@
                   <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
                     <span class="badge badge--sm badge--lime" style="font-size: 0.65rem;">{{ s.language|upper }}</span>
                     • {{ s.updated_at.strftime('%b %d, %Y') if s.updated_at else '' }}
-                    {% if s.notes %} — {{ s.notes[:40] }}{% endif %}
+                    {% if s.notes %} — {{ s.notes[:45] }}{% endif %}
                   </div>
                 </div>
                 <div class="flex gap-xs">
-                  <button class="btn btn--primary btn--sm" onclick="loadSavedSnippet({{ s.id }})">
-                    Load
-                  </button>
-                  <button class="btn btn--danger btn--sm" onclick="deleteSavedSnippet({{ s.id }})">
-                    Delete
-                  </button>
+                  <button class="btn btn--primary btn--sm" onclick="loadSavedSnippet({{ s.id }})">Load</button>
+                  <button class="btn btn--danger btn--sm" onclick="deleteSavedSnippet({{ s.id }})">Delete</button>
                 </div>
               </div>
             {% endfor %}
@@ -263,7 +299,7 @@
           <div class="empty-state" style="padding: var(--space-xl) 0;">
             <div class="empty-state__icon">📂</div>
             <div class="empty-state__title">No Saved Snippets Yet</div>
-            <div class="empty-state__text">Write or load code in the editor, then click "Save Current" to store it here.</div>
+            <div class="empty-state__text">Write or load code in the editor, then click "Save Snippet" to store it here.</div>
           </div>
         {% endif %}
       </div>
@@ -274,82 +310,263 @@
 
 {% block scripts %}
 <script>
-/* Code Lab Studio Client Logic */
+/**
+ * Code Lab Studio — Enhanced IDE Workbench Logic
+ */
 'use strict';
 
 const PRESETS = {{ presets|tojson }};
 let currentMode = 'explain';
 let rawMarkdownResult = '';
+let isWordWrap = false;
+let isFullscreen = false;
+
+// Language file metadata
+const LANG_META = {
+  python: { ext: 'main.py', icon: '🐍', name: 'Python 3' },
+  c: { ext: 'program.c', icon: '⚙️', name: 'C (C99)' },
+  cpp: { ext: 'solution.cpp', icon: '⚡', name: 'C++17' },
+  java: { ext: 'Main.java', icon: '☕', name: 'Java 17' },
+  javascript: { ext: 'index.js', icon: '📜', name: 'JavaScript' },
+  sql: { ext: 'query.sql', icon: '🗄️', name: 'SQL' },
+  csharp: { ext: 'Program.cs', icon: '🔷', name: 'C# .NET' },
+  go: { ext: 'main.go', icon: '🔵', name: 'Go' },
+  rust: { ext: 'main.rs', icon: '🦀', name: 'Rust' }
+};
+
+// Safe Toast Helper
+function notify(message, type = 'info') {
+  if (typeof Toast !== 'undefined' && typeof Toast[type] === 'function') {
+    Toast[type](message);
+  } else if (typeof Toast !== 'undefined' && typeof Toast.show === 'function') {
+    Toast.show(message, type);
+  } else {
+    console.log(`[${type}] ${message}`);
+  }
+}
 
 // On page load
 document.addEventListener('DOMContentLoaded', () => {
-  // Load default preset if empty
   const codeInput = document.getElementById('code-input');
   if (!codeInput.value.trim() && PRESETS.length > 0) {
     loadPreset(PRESETS[0].id);
   } else {
     updateLineNumbers();
+    updateCursorPos();
   }
 });
 
-// Update line numbers gutter
+// Update Line Numbers Gutter
 function updateLineNumbers() {
   const textarea = document.getElementById('code-input');
-  const gutter = document.getElementById('code-line-numbers');
-  const lineCount = (textarea.value.split('\n').length) || 1;
-  let nums = '';
+  const gutter = document.getElementById('ide-gutter');
+  const lines = textarea.value.split('\n');
+  const lineCount = lines.length || 1;
+
+  // Find active line
+  const cursorPos = textarea.selectionStart;
+  const currentLineIndex = textarea.value.substring(0, cursorPos).split('\n').length;
+
+  let gutterHtml = '';
   for (let i = 1; i <= lineCount; i++) {
-    nums += i + '<br>';
+    const isActive = i === currentLineIndex ? 'active' : '';
+    gutterHtml += `<span class="gutter-num ${isActive}">${i}</span>`;
   }
-  gutter.innerHTML = nums;
+  gutter.innerHTML = gutterHtml;
+
+  // Update statistics
+  const charCount = textarea.value.length;
+  document.getElementById('ide-stats').textContent = `${lineCount} line${lineCount === 1 ? '' : 's'} • ${charCount} char${charCount === 1 ? '' : 's'}`;
 }
 
-// Sync vertical scrolling between gutter and textarea
+// Sync Vertical Scroll between Textarea and Gutter
 function syncScroll() {
   const textarea = document.getElementById('code-input');
-  const gutter = document.getElementById('code-line-numbers');
+  const gutter = document.getElementById('ide-gutter');
   gutter.scrollTop = textarea.scrollTop;
 }
 
-// Tab key indent support inside textarea
+// Update cursor position Ln X, Col Y in footer
+function updateCursorPos() {
+  const textarea = document.getElementById('code-input');
+  const textBefore = textarea.value.substring(0, textarea.selectionStart);
+  const lines = textBefore.split('\n');
+  const lineNum = lines.length;
+  const colNum = lines[lines.length - 1].length + 1;
+  document.getElementById('ide-cursor-pos').textContent = `Ln ${lineNum}, Col ${colNum}`;
+
+  // Highlight line in gutter
+  const gutterNums = document.querySelectorAll('.ide-gutter .gutter-num');
+  gutterNums.forEach((el, idx) => {
+    if (idx + 1 === lineNum) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+}
+
+function handleEditorInput() {
+  updateLineNumbers();
+  updateCursorPos();
+}
+
+// Tab Indentation, Auto-indent & Auto-pairing
 function handleEditorKeyDown(e) {
+  const textarea = e.target;
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  // 1. Tab key indent / Shift+Tab unindent
   if (e.key === 'Tab') {
     e.preventDefault();
-    const textarea = e.target;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const spaces = '    ';
-    textarea.value = textarea.value.substring(0, start) + spaces + textarea.value.substring(end);
-    textarea.selectionStart = textarea.selectionEnd = start + spaces.length;
+    const tabSpaces = '    ';
+    if (!e.shiftKey) {
+      // Normal Tab: insert 4 spaces
+      textarea.value = textarea.value.substring(0, start) + tabSpaces + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 4;
+    } else {
+      // Shift+Tab: unindent
+      const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+      if (textarea.value.substring(lineStart, lineStart + 4) === '    ') {
+        textarea.value = textarea.value.substring(0, lineStart) + textarea.value.substring(lineStart + 4);
+        textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 4);
+      }
+    }
     updateLineNumbers();
+    updateCursorPos();
+    return;
   }
+
+  // 2. Auto-indent on Enter
+  if (e.key === 'Enter') {
+    const currentLineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+    const currentLine = textarea.value.substring(currentLineStart, start);
+    const match = currentLine.match(/^(\s+)/);
+    let indent = match ? match[1] : '';
+
+    // If previous line ends with ':' or '{', add extra indent
+    if (currentLine.trim().endsWith(':') || currentLine.trim().endsWith('{')) {
+      indent += '    ';
+    }
+
+    if (indent.length > 0) {
+      e.preventDefault();
+      const insertText = '\n' + indent;
+      textarea.value = textarea.value.substring(0, start) + insertText + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+      updateLineNumbers();
+      updateCursorPos();
+      return;
+    }
+  }
+
+  // 3. Auto-close brackets & quotes
+  const pairs = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+  if (pairs[e.key]) {
+    // Only auto-pair if no selection or text selected
+    if (start === end) {
+      e.preventDefault();
+      const closeChar = pairs[e.key];
+      textarea.value = textarea.value.substring(0, start) + e.key + closeChar + textarea.value.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 1;
+      updateLineNumbers();
+      updateCursorPos();
+      return;
+    }
+  }
+
+  // Update cursor after a tick
+  setTimeout(updateCursorPos, 10);
 }
 
 // Clear editor
 function clearCode() {
-  if (!document.getElementById('code-input').value.trim() || confirm('Clear the code editor?')) {
+  const code = document.getElementById('code-input').value.trim();
+  if (!code || confirm('Clear the code editor?')) {
     document.getElementById('code-input').value = '';
-    document.getElementById('preset-select').value = '';
+    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
     updateLineNumbers();
+    updateCursorPos();
+    document.getElementById('code-input').focus();
   }
 }
 
-// Load preset algorithm
+// Paste from Clipboard
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      const textarea = document.getElementById('code-input');
+      textarea.value = text;
+      updateLineNumbers();
+      updateCursorPos();
+      notify('Code pasted from clipboard!', 'success');
+    }
+  } catch (err) {
+    notify('Clipboard access not permitted. Use Ctrl+V instead.', 'info');
+  }
+}
+
+// Toggle Word Wrap
+function toggleWordWrap() {
+  isWordWrap = !isWordWrap;
+  const textarea = document.getElementById('code-input');
+  const btn = document.getElementById('btn-toggle-wrap');
+  if (isWordWrap) {
+    textarea.classList.add('wrap-text');
+    btn.textContent = '🔠 Wrap: On';
+    btn.style.color = 'var(--accent-lime)';
+  } else {
+    textarea.classList.remove('wrap-text');
+    btn.textContent = '🔠 Wrap: Off';
+    btn.style.color = '';
+  }
+}
+
+// Toggle Fullscreen Editor
+function toggleFullscreen() {
+  isFullscreen = !isFullscreen;
+  const ideWindow = document.getElementById('ide-window');
+  const btn = document.getElementById('btn-fullscreen');
+  if (isFullscreen) {
+    ideWindow.classList.add('fullscreen');
+    btn.textContent = '✕ Exit Fullscreen';
+    btn.style.color = 'var(--accent-orange)';
+  } else {
+    ideWindow.classList.remove('fullscreen');
+    btn.textContent = '⛶';
+    btn.style.color = '';
+  }
+}
+
+// Load Preset Algorithm
 function loadPreset(presetId) {
   if (!presetId) return;
   const p = PRESETS.find(item => item.id === presetId);
   if (p) {
     document.getElementById('code-input').value = p.code.trim();
     document.getElementById('code-language').value = p.language;
-    document.getElementById('preset-select').value = presetId;
+    onLanguageChange();
+
+    // Highlight chip
+    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+    const activeChip = document.getElementById('chip-' + presetId);
+    if (activeChip) activeChip.classList.add('active');
+
     updateLineNumbers();
-    AIStatus.toast(`Loaded "${p.title}"`, 'info');
+    updateCursorPos();
+    notify(`Loaded preset "${p.title}"`, 'success');
   }
 }
 
 // Language change handler
 function onLanguageChange() {
-  document.getElementById('preset-select').value = '';
+  const lang = document.getElementById('code-language').value;
+  const meta = LANG_META[lang] || { ext: 'main.txt', icon: '💻', name: lang.toUpperCase() };
+  document.getElementById('ide-file-icon').textContent = meta.icon;
+  document.getElementById('ide-file-name').textContent = meta.ext;
+  document.getElementById('ide-lang-display').textContent = meta.name;
 }
 
 // Toggle collapsible context panels
@@ -365,11 +582,11 @@ function toggleContextPanel(id) {
   }
 }
 
-// Run Analysis
+// Run AI Analysis Pipeline
 async function runAnalysis(mode) {
   const code = document.getElementById('code-input').value.trim();
   if (!code) {
-    AIStatus.toast('Please enter or paste code first.', 'warning');
+    notify('Please enter or paste code first.', 'warning');
     document.getElementById('code-input').focus();
     return;
   }
@@ -441,15 +658,15 @@ async function runAnalysis(mode) {
     actionsEl.style.display = 'flex';
     badgeEl.className = 'badge badge--lime';
     badgeEl.textContent = 'Completed';
-    metaEl.textContent = `${language.toUpperCase()} • ${mode.toUpperCase()} generated`;
-    AIStatus.toast(`Analysis ready!`, 'success');
+    metaEl.textContent = `${language.toUpperCase()} • ${mode.toUpperCase()} ready`;
+    notify('Analysis ready!', 'success');
   } catch (err) {
     loadingEl.style.display = 'none';
     emptyEl.style.display = 'flex';
     badgeEl.className = 'badge badge--danger';
     badgeEl.textContent = 'Error';
     metaEl.textContent = err.message;
-    AIStatus.toast(`Failed: ${err.message}`, 'error');
+    notify(`Failed: ${err.message}`, 'error');
   }
 }
 
@@ -560,7 +777,7 @@ function copyCodeSnippet(btn) {
 function copyResultText() {
   if (!rawMarkdownResult) return;
   navigator.clipboard.writeText(rawMarkdownResult).then(() => {
-    AIStatus.toast('Full analysis copied to clipboard!', 'success');
+    notify('Full analysis copied to clipboard!', 'success');
   });
 }
 
@@ -578,14 +795,14 @@ function downloadResultMarkdown() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  AIStatus.toast(`Downloaded ${filename}`, 'info');
+  notify(`Downloaded ${filename}`, 'info');
 }
 
 // Modal controls: Save snippet
 function openSaveSnippetModal() {
   const code = document.getElementById('code-input').value.trim();
   if (!code) {
-    AIStatus.toast('Editor is empty. Write or paste code first.', 'warning');
+    notify('Editor is empty. Write or paste code first.', 'warning');
     return;
   }
   document.getElementById('modal-save-snippet').classList.add('open');
@@ -605,7 +822,7 @@ async function submitSaveSnippet() {
   const language = document.getElementById('code-language').value;
 
   if (!title) {
-    AIStatus.toast('Please enter a snippet title', 'warning');
+    notify('Please enter a snippet title', 'warning');
     return;
   }
 
@@ -618,10 +835,10 @@ async function submitSaveSnippet() {
     if (!resp.ok) throw new Error('Failed to save snippet');
     const saved = await resp.json();
     closeSaveSnippetModal();
-    AIStatus.toast(`Saved snippet "${saved.title}"!`, 'success');
+    notify(`Saved snippet "${saved.title}"!`, 'success');
     refreshSnippetsList();
   } catch (err) {
-    AIStatus.toast(err.message, 'error');
+    notify(err.message, 'error');
   }
 }
 
@@ -654,7 +871,7 @@ async function refreshSnippetsList() {
                 </div>
                 <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
                   <span class="badge badge--sm badge--lime" style="font-size: 0.65rem;">${s.language.toUpperCase()}</span>
-                  ${s.notes ? ` • ${s.notes.substring(0, 40)}` : ''}
+                  ${s.notes ? ` • ${s.notes.substring(0, 45)}` : ''}
                 </div>
               </div>
               <div class="flex gap-xs">
@@ -671,7 +888,7 @@ async function refreshSnippetsList() {
         <div class="empty-state" style="padding: var(--space-xl) 0;">
           <div class="empty-state__icon">📂</div>
           <div class="empty-state__title">No Saved Snippets Yet</div>
-          <div class="empty-state__text">Write or load code in the editor, then click "Save Current" to store it here.</div>
+          <div class="empty-state__text">Write or load code in the editor, then click "Save Snippet" to store it here.</div>
         </div>
       `;
     }
@@ -687,12 +904,14 @@ async function loadSavedSnippet(id) {
     const s = await resp.json();
     document.getElementById('code-input').value = s.code;
     document.getElementById('code-language').value = s.language;
-    document.getElementById('preset-select').value = '';
+    onLanguageChange();
+    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
     updateLineNumbers();
+    updateCursorPos();
     closeSnippetsModal();
-    AIStatus.toast(`Loaded snippet "${s.title}"`, 'success');
+    notify(`Loaded snippet "${s.title}"`, 'success');
   } catch (err) {
-    AIStatus.toast(err.message, 'error');
+    notify(err.message, 'error');
   }
 }
 
@@ -703,10 +922,10 @@ async function deleteSavedSnippet(id) {
     if (!resp.ok) throw new Error('Failed to delete snippet');
     const row = document.getElementById(`snippet-row-${id}`);
     if (row) row.remove();
-    AIStatus.toast('Snippet deleted', 'info');
+    notify('Snippet deleted', 'info');
     refreshSnippetsList();
   } catch (err) {
-    AIStatus.toast(err.message, 'error');
+    notify(err.message, 'error');
   }
 }
 </script>
