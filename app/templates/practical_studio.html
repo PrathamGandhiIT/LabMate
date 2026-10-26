@@ -1,0 +1,840 @@
+{% extends "base.html" %}
+
+{% block title %}Practical Studio — AI LabMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="flex items-center justify-between flex-wrap gap-md">
+    <div>
+      <h1 class="page-title">Practical Studio</h1>
+      <p class="page-subtitle">Generate, edit, and organize complete academic practical files.</p>
+    </div>
+    <div class="flex gap-sm">
+      <a href="/my-practicals" class="btn btn--secondary btn--sm">
+        <span>📂</span> View My Practicals
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="studio-layout">
+  <!-- Left Column: Structured Form Panel -->
+  <div class="studio-form-panel">
+    <div class="card">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Experiment Details</h2>
+          <p class="card__subtitle">Configure your engineering practical requirements</p>
+        </div>
+        <span class="badge badge--lime">Local AI</span>
+      </div>
+
+      <form id="practical-form" onsubmit="return false;">
+        <!-- Subject -->
+        <div class="form-group">
+          <label class="form-label" for="subject-input">Subject / Course Name *</label>
+          <input
+            type="text"
+            id="subject-input"
+            class="form-input"
+            placeholder="e.g. Data Structures & Algorithms"
+            value="{{ preloaded_practical.subject if preloaded_practical else '' }}"
+            required
+          />
+          <div class="tag-chips">
+            <span class="tag-chip" onclick="setSubject('Data Structures & Algorithms')">DSA</span>
+            <span class="tag-chip" onclick="setSubject('Operating Systems')">OS</span>
+            <span class="tag-chip" onclick="setSubject('Database Management Systems')">DBMS</span>
+            <span class="tag-chip" onclick="setSubject('Computer Networks')">CN</span>
+            <span class="tag-chip" onclick="setSubject('Object Oriented Programming')">OOPs</span>
+            <span class="tag-chip" onclick="setSubject('Python Programming')">Python</span>
+            <span class="tag-chip" onclick="setSubject('Web Technologies')">Web Tech</span>
+          </div>
+        </div>
+
+        <!-- Practical Number & Language in 2-column grid -->
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label" for="practical-num-input">Practical No. (Optional)</label>
+            <input
+              type="text"
+              id="practical-num-input"
+              class="form-input"
+              placeholder="e.g. 03"
+              value="{{ preloaded_practical.practical_number if preloaded_practical and preloaded_practical.practical_number else '' }}"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="language-select">Language / Tool</label>
+            <select id="language-select" class="form-select">
+              <option value="C++" {% if preloaded_practical and preloaded_practical.language == 'C++' %}selected{% endif %}>C++</option>
+              <option value="C" {% if preloaded_practical and preloaded_practical.language == 'C' %}selected{% endif %}>C</option>
+              <option value="Java" {% if preloaded_practical and preloaded_practical.language == 'Java' %}selected{% endif %}>Java</option>
+              <option value="Python" {% if preloaded_practical and preloaded_practical.language == 'Python' %}selected{% endif %}>Python</option>
+              <option value="SQL" {% if preloaded_practical and preloaded_practical.language == 'SQL' %}selected{% endif %}>SQL</option>
+              <option value="JavaScript" {% if preloaded_practical and preloaded_practical.language == 'JavaScript' %}selected{% endif %}>JavaScript</option>
+              <option value="Bash/Linux" {% if preloaded_practical and preloaded_practical.language == 'Bash/Linux' %}selected{% endif %}>Bash / Linux</option>
+              <option value="Theory" {% if preloaded_practical and preloaded_practical.language == 'Theory' %}selected{% endif %}>Theory (No Code)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div class="form-group">
+          <label class="form-label" for="title-input">Practical Title *</label>
+          <input
+            type="text"
+            id="title-input"
+            class="form-input"
+            placeholder="e.g. Implementation of Singly Linked List Operations"
+            value="{{ preloaded_practical.title if preloaded_practical else '' }}"
+            required
+          />
+        </div>
+
+        <!-- Problem Statement / Question -->
+        <div class="form-group">
+          <label class="form-label" for="question-input">Problem Statement / Question *</label>
+          <textarea
+            id="question-input"
+            class="form-textarea"
+            rows="4"
+            placeholder="Write a program to implement a singly linked list with insertion, deletion, and traversal operations."
+            required
+          >{{ preloaded_practical.question if preloaded_practical else '' }}</textarea>
+        </div>
+
+        <!-- Sections Selection -->
+        <div class="form-group">
+          <div class="flex items-center justify-between mb-xs">
+            <label class="form-label" style="margin-bottom:0;">Sections to Include</label>
+            <div class="flex gap-sm">
+              <button type="button" class="btn btn--ghost btn--sm" onclick="toggleAllSections(true)" style="padding:0;font-size:var(--text-xs);">All</button>
+              <span class="text-muted">|</span>
+              <button type="button" class="btn btn--ghost btn--sm" onclick="toggleAllSections(false)" style="padding:0;font-size:var(--text-xs);">None</button>
+            </div>
+          </div>
+          <div class="checkbox-group" id="sections-checkbox-group">
+            {% for key, info in section_definitions.items() %}
+            <label class="checkbox-pill checked" id="pill-{{ key }}">
+              <input
+                type="checkbox"
+                name="sections"
+                value="{{ key }}"
+                checked
+                onchange="syncPillState(this)"
+              />
+              <span>{{ info.icon }}</span>
+              <span>{{ info.title }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Answer Length Selector -->
+        <div class="form-group">
+          <label class="form-label">Depth Level</label>
+          <div class="segmented-control" id="length-selector">
+            <div class="segmented-option" data-val="short" onclick="setLength('short')">Short</div>
+            <div class="segmented-option active" data-val="medium" onclick="setLength('medium')">Standard Lab</div>
+            <div class="segmented-option" data-val="detailed" onclick="setLength('detailed')">Detailed</div>
+          </div>
+          <input type="hidden" id="answer-length" value="medium" />
+        </div>
+
+        <!-- Additional Instructions -->
+        <div class="form-group">
+          <label class="form-label" for="instructions-input">Additional Notes (Optional)</label>
+          <input
+            type="text"
+            id="instructions-input"
+            class="form-input"
+            placeholder="e.g. Include class-based structure, add menu-driven main()"
+          />
+        </div>
+
+        <!-- Hidden ID for editing existing practical -->
+        <input type="hidden" id="editing-practical-id" value="{{ preloaded_practical.id if preloaded_practical else '' }}" />
+
+        <!-- Submit Button -->
+        <div class="mt-lg">
+          <button
+            type="button"
+            id="generate-btn"
+            class="btn btn--primary"
+            style="width: 100%; padding: 12px;"
+            onclick="generatePractical()"
+          >
+            <span>✨</span>
+            <span>Generate Practical</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right Column: Interactive Results & Preview Panel -->
+  <div class="studio-preview-panel">
+    <!-- Initial Empty State (if no practical generated yet) -->
+    <div id="preview-empty" class="card" {% if preloaded_practical %}style="display:none;"{% endif %}>
+      <div class="empty-state">
+        <div class="empty-state__icon">📄</div>
+        <div class="empty-state__title">Practical Output Preview</div>
+        <div class="empty-state__text">
+          Fill in your experiment details on the left and click <strong>Generate Practical</strong>.
+          AI LabMate will produce complete, formatted, academic lab content.
+        </div>
+        <div class="grid grid-3 mt-lg" style="text-align: left; width: 100%; max-width: 640px;">
+          <div class="card card--secondary" style="padding: 12px;">
+            <div style="font-size: 1.2rem; margin-bottom: 4px;">🎯</div>
+            <div style="font-weight: 600; font-size: var(--text-xs); color: var(--text-primary);">Aim & Algorithm</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">Standard step-by-step procedures</div>
+          </div>
+          <div class="card card--secondary" style="padding: 12px;">
+            <div style="font-size: 1.2rem; margin-bottom: 4px;">💻</div>
+            <div style="font-weight: 600; font-size: var(--text-xs); color: var(--text-primary);">Working Code & Trace</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">Well-commented syntax with terminal output</div>
+          </div>
+          <div class="card card--secondary" style="padding: 12px;">
+            <div style="font-size: 1.2rem; margin-bottom: 4px;">💡</div>
+            <div style="font-weight: 600; font-size: var(--text-xs); color: var(--text-primary);">Viva Questions</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">High-yield questions with model answers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="preview-loading" class="card" style="display: none;">
+      <div class="loading-overlay">
+        <div class="spinner"></div>
+        <div style="text-align: center;">
+          <div style="font-weight: var(--weight-semibold); color: var(--text-primary); font-size: var(--text-md);" id="loading-status-text">
+            Generating practical with local AI...
+          </div>
+          <div class="form-hint" style="margin-top: 6px;">
+            This typically takes 10-30 seconds depending on your hardware.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Practical Content Container -->
+    <div id="preview-content" style="{% if not preloaded_practical %}display:none;{% endif %} display: flex; flex-direction: column; gap: var(--space-md);">
+      <!-- Header Card with Metadata & Global Actions -->
+      <div class="studio-header-card">
+        <div class="studio-header-top">
+          <div>
+            <div class="flex items-center gap-sm mb-xs flex-wrap">
+              <span id="badge-practical-num" class="badge badge--lime">Practical #01</span>
+              <span id="badge-subject" class="badge badge--orange">Data Structures</span>
+              <span id="badge-language" class="badge badge--muted">C++</span>
+            </div>
+            <h2 id="display-title" class="card__title" style="font-size: var(--text-xl);">Practical Title</h2>
+            <div id="display-question" class="form-hint" style="font-size: var(--text-sm); color: var(--text-secondary); margin-top: 4px;"></div>
+          </div>
+
+          <div class="studio-header-actions">
+            <button type="button" class="btn btn--primary btn--sm" id="save-practical-btn" onclick="saveCurrentPractical()">
+              <span>💾</span> Save Practical
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" onclick="copyEntirePractical()">
+              <span>📋</span> Copy All
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" onclick="downloadPractical('markdown')">
+              <span>⬇</span> .md
+            </button>
+            <button type="button" class="btn btn--secondary btn--sm" onclick="downloadPractical('txt')">
+              <span>⬇</span> .txt
+            </button>
+          </div>
+        </div>
+
+        <!-- Section Navigation Pills -->
+        <div class="studio-section-nav" id="section-nav-pills"></div>
+      </div>
+
+      <!-- Generated Section Cards Container -->
+      <div id="sections-container" style="display: flex; flex-direction: column; gap: var(--space-md);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Metadata dict passed safely as JSON for frontend JS -->
+<script id="section-definitions-data" type="application/json">
+{{ section_definitions | tojson }}
+</script>
+{% if preloaded_practical %}
+<script id="preloaded-practical-data" type="application/json">
+{{ preloaded_practical | tojson }}
+</script>
+{% endif %}
+
+<script>
+/**
+ * Practical Studio Client Controller
+ */
+const SECTION_DEFS = JSON.parse(document.getElementById('section-definitions-data').textContent || '{}');
+let currentPractical = {
+  id: null,
+  subject: '',
+  practical_number: '',
+  title: '',
+  question: '',
+  language: '',
+  sections: {}
+};
+
+// Subject tag click handler
+function setSubject(subjectName) {
+  document.getElementById('subject-input').value = subjectName;
+}
+
+// Answer length segmented control handler
+function setLength(val) {
+  document.getElementById('answer-length').value = val;
+  document.querySelectorAll('#length-selector .segmented-option').forEach(el => {
+    el.classList.toggle('active', el.dataset.val === val);
+  });
+}
+
+// Toggle checkboxes helper
+function toggleAllSections(checked) {
+  document.querySelectorAll('#sections-checkbox-group input[type="checkbox"]').forEach(cb => {
+    cb.checked = checked;
+    syncPillState(cb);
+  });
+}
+
+function syncPillState(checkbox) {
+  const pill = document.getElementById(`pill-${checkbox.value}`);
+  if (pill) {
+    pill.classList.toggle('checked', checkbox.checked);
+  }
+}
+
+// Initialize preloaded practical if any
+document.addEventListener('DOMContentLoaded', () => {
+  const preloadedScript = document.getElementById('preloaded-practical-data');
+  if (preloadedScript) {
+    try {
+      const data = JSON.parse(preloadedScript.textContent);
+      if (data && data.sections) {
+        currentPractical = {
+          id: data.id || null,
+          subject: data.subject || '',
+          practical_number: data.practical_number || '',
+          title: data.title || '',
+          question: data.question || '',
+          language: data.language || '',
+          sections: data.sections || {}
+        };
+        renderPracticalPreview();
+      }
+    } catch (e) {
+      console.error('Error parsing preloaded practical:', e);
+    }
+  }
+});
+
+// Main generation call
+async function generatePractical() {
+  const subject = document.getElementById('subject-input').value.trim();
+  const title = document.getElementById('title-input').value.trim();
+  const question = document.getElementById('question-input').value.trim();
+  const practical_number = document.getElementById('practical-num-input').value.trim();
+  const language = document.getElementById('language-select').value;
+  const answer_length = document.getElementById('answer-length').value;
+  const additional_instructions = document.getElementById('instructions-input').value.trim();
+
+  if (!subject) {
+    Toast.error('Please enter a subject name');
+    document.getElementById('subject-input').focus();
+    return;
+  }
+  if (!title) {
+    Toast.error('Please enter a practical title');
+    document.getElementById('title-input').focus();
+    return;
+  }
+  if (!question) {
+    Toast.error('Please enter the problem statement');
+    document.getElementById('question-input').focus();
+    return;
+  }
+
+  const selectedSections = [];
+  document.querySelectorAll('#sections-checkbox-group input[type="checkbox"]:checked').forEach(cb => {
+    selectedSections.push(cb.value);
+  });
+
+  if (selectedSections.length === 0) {
+    Toast.error('Please select at least one section to include');
+    return;
+  }
+
+  const generateBtn = document.getElementById('generate-btn');
+  setLoading(generateBtn, true, '✨ Generate Practical');
+
+  document.getElementById('preview-empty').style.display = 'none';
+  document.getElementById('preview-content').style.display = 'none';
+  document.getElementById('preview-loading').style.display = 'block';
+
+  try {
+    const response = await fetch('/api/practical/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject,
+        practical_number: practical_number || null,
+        title,
+        question,
+        language,
+        sections: selectedSections,
+        answer_length,
+        additional_instructions: additional_instructions || null
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Failed to generate practical');
+    }
+
+    currentPractical = {
+      id: document.getElementById('editing-practical-id').value || null,
+      subject,
+      practical_number,
+      title,
+      question,
+      language,
+      sections: data.sections
+    };
+
+    Toast.success('Practical generated successfully!');
+    renderPracticalPreview();
+
+  } catch (err) {
+    console.error('Generation error:', err);
+    Toast.error(err.message || 'Generation failed');
+    document.getElementById('preview-empty').style.display = 'block';
+  } finally {
+    setLoading(generateBtn, false, '✨ Generate Practical');
+    document.getElementById('preview-loading').style.display = 'none';
+  }
+}
+
+// Render generated sections into the preview UI
+function renderPracticalPreview() {
+  document.getElementById('preview-empty').style.display = 'none';
+  document.getElementById('preview-loading').style.display = 'none';
+  const previewContent = document.getElementById('preview-content');
+  previewContent.style.display = 'flex';
+
+  // Badges & Header
+  const numBadge = document.getElementById('badge-practical-num');
+  if (currentPractical.practical_number) {
+    numBadge.textContent = `Practical #${currentPractical.practical_number}`;
+    numBadge.style.display = 'inline-flex';
+  } else {
+    numBadge.style.display = 'none';
+  }
+
+  document.getElementById('badge-subject').textContent = currentPractical.subject;
+  document.getElementById('badge-language').textContent = currentPractical.language || 'Standard';
+  document.getElementById('display-title').textContent = currentPractical.title;
+  document.getElementById('display-question').textContent = currentPractical.question;
+
+  // Nav pills & Section Cards
+  const navContainer = document.getElementById('section-nav-pills');
+  const sectionsContainer = document.getElementById('sections-container');
+  navContainer.innerHTML = '';
+  sectionsContainer.innerHTML = '';
+
+  const activeKeys = Object.keys(currentPractical.sections);
+
+  activeKeys.forEach((key, index) => {
+    const meta = SECTION_DEFS[key] || { title: key.toUpperCase(), icon: '📝' };
+    const content = currentPractical.sections[key] || '';
+
+    // Add navigation pill
+    const pill = document.createElement('a');
+    pill.className = 'studio-nav-pill';
+    pill.href = `#sec-${key}`;
+    pill.textContent = `${meta.icon} ${meta.title}`;
+    navContainer.appendChild(pill);
+
+    // Build section card
+    const card = document.createElement('div');
+    card.className = 'studio-section-card';
+    card.id = `sec-${key}`;
+
+    card.innerHTML = `
+      <div class="studio-section-header">
+        <div class="studio-section-title-wrap">
+          <span class="studio-section-icon">${meta.icon}</span>
+          <span class="studio-section-name">${escapeHtml(meta.title)}</span>
+        </div>
+        <div class="studio-section-actions">
+          <button type="button" class="btn btn--ghost btn--sm" onclick="copySection('${key}')">
+            <span>📋</span> Copy
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" onclick="toggleEditSection('${key}')" id="edit-btn-${key}">
+            <span>✏️</span> Edit
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" onclick="toggleRegenInput('${key}')" id="regen-btn-${key}">
+            <span>🔄</span> Regenerate
+          </button>
+        </div>
+      </div>
+
+      <!-- Regenerate Prompt Box (hidden by default) -->
+      <div id="regen-box-${key}" class="regen-input-box" style="display:none; margin: var(--space-md) var(--space-lg) 0;">
+        <input type="text" id="regen-prompt-${key}" placeholder="Custom instructions (e.g. 'Use recursion', 'Add comments', 'Make more concise')" />
+        <button type="button" class="btn btn--orange btn--sm" onclick="submitRegenerate('${key}')">Go</button>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="toggleRegenInput('${key}')">✕</button>
+      </div>
+
+      <!-- Section Body Display -->
+      <div class="studio-section-body" id="body-display-${key}">
+        ${formatSectionContent(key, content)}
+      </div>
+
+      <!-- Inline Edit Container (hidden by default) -->
+      <div class="studio-section-body" id="body-edit-${key}" style="display:none;">
+        <div class="section-edit-container">
+          <textarea id="edit-textarea-${key}">${escapeHtml(content)}</textarea>
+          <div class="section-edit-actions">
+            <button type="button" class="btn btn--ghost btn--sm" onclick="toggleEditSection('${key}')">Cancel</button>
+            <button type="button" class="btn btn--primary btn--sm" onclick="saveEditedSection('${key}')">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    sectionsContainer.appendChild(card);
+  });
+}
+
+// Format section content based on type (code, output, viva, standard markdown)
+function formatSectionContent(key, text) {
+  if (!text) return '<span class="text-muted">*(Empty)*</span>';
+
+  // Format code blocks
+  if (key === 'code') {
+    // If text already contains code fence, extract it or display inside pre
+    let codeText = text;
+    const fenceMatch = text.match(/```(?:\w+)?\n([\s\S]*?)```/);
+    if (fenceMatch) {
+      codeText = fenceMatch[1];
+    }
+    return `
+      <div class="code-box">
+        <div class="code-box-header">
+          <span>${escapeHtml(currentPractical.language || 'Code')}</span>
+          <button type="button" class="btn btn--ghost btn--sm" style="padding: 2px 8px; font-size: 11px;" onclick="copyToClipboard(decodeURIComponent('${encodeURIComponent(codeText)}'))">Copy Code</button>
+        </div>
+        <pre><code>${escapeHtml(codeText)}</code></pre>
+      </div>
+    `;
+  }
+
+  // Format output blocks as terminal
+  if (key === 'output') {
+    let cleanOutput = text.replace(/```(?:\w+)?\n?/g, '');
+    return `
+      <div class="terminal-box">
+        <div class="terminal-header">
+          <span class="terminal-dot terminal-dot--red"></span>
+          <span class="terminal-dot terminal-dot--yellow"></span>
+          <span class="terminal-dot terminal-dot--green"></span>
+          <span class="terminal-title">Execution Output</span>
+        </div>
+        <div class="terminal-body">${escapeHtml(cleanOutput)}</div>
+      </div>
+    `;
+  }
+
+  // Format Viva Questions & Answers
+  if (key === 'viva_questions') {
+    return parseVivaQuestions(text);
+  }
+
+  // Default: Markdown paragraphs & step lists
+  return formatMarkdownSimple(text);
+}
+
+// Convert viva text (Q1: ... A1: ...) into styled cards
+function parseVivaQuestions(text) {
+  const lines = text.split('\n');
+  let html = '';
+  let currentQ = '';
+  let currentA = '';
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (/^(?:Q\d*[:.]|\d+[\.)]|Question\s*\d*[:.])/i.test(trimmed)) {
+      if (currentQ) {
+        html += `<div class="viva-item"><div class="viva-q">${escapeHtml(currentQ)}</div><div class="viva-a">${escapeHtml(currentA)}</div></div>`;
+      }
+      currentQ = trimmed;
+      currentA = '';
+    } else if (/^(?:Ans(?:wer)?[:.]|A[:.])/i.test(trimmed)) {
+      currentA = trimmed;
+    } else if (trimmed) {
+      if (currentA) {
+        currentA += ' ' + trimmed;
+      } else if (currentQ) {
+        currentQ += ' ' + trimmed;
+      } else {
+        currentQ = trimmed;
+      }
+    }
+  }
+
+  if (currentQ) {
+    html += `<div class="viva-item"><div class="viva-q">${escapeHtml(currentQ)}</div><div class="viva-a">${escapeHtml(currentA)}</div></div>`;
+  }
+
+  return html || `<div style="white-space: pre-wrap;">${escapeHtml(text)}</div>`;
+}
+
+// Basic markdown formatter for paragraphs and lists
+function formatMarkdownSimple(text) {
+  let lines = text.split('\n');
+  let result = [];
+  let inList = false;
+
+  lines.forEach(line => {
+    let trimmed = line.trim();
+    if (!trimmed) {
+      if (inList) {
+        result.push('</ul>');
+        inList = false;
+      }
+      result.push('<br>');
+    } else if (/^(?:[-*]|\d+\.)\s+/.test(trimmed)) {
+      if (!inList) {
+        result.push('<ul style="padding-left: 20px; margin: 4px 0;">');
+        inList = true;
+      }
+      let content = trimmed.replace(/^(?:[-*]|\d+\.)\s+/, '');
+      result.push(`<li>${escapeHtml(content)}</li>`);
+    } else {
+      if (inList) {
+        result.push('</ul>');
+        inList = false;
+      }
+      result.push(`<p style="margin-bottom: 6px;">${escapeHtml(trimmed)}</p>`);
+    }
+  });
+
+  if (inList) result.push('</ul>');
+  return result.join('');
+}
+
+// Toggle in-place editing
+function toggleEditSection(key) {
+  const displayEl = document.getElementById(`body-display-${key}`);
+  const editEl = document.getElementById(`body-edit-${key}`);
+  const isEditing = editEl.style.display !== 'none';
+
+  displayEl.style.display = isEditing ? 'block' : 'none';
+  editEl.style.display = isEditing ? 'none' : 'block';
+}
+
+function saveEditedSection(key) {
+  const textarea = document.getElementById(`edit-textarea-${key}`);
+  const newContent = textarea.value;
+  currentPractical.sections[key] = newContent;
+
+  const displayEl = document.getElementById(`body-display-${key}`);
+  displayEl.innerHTML = formatSectionContent(key, newContent);
+  toggleEditSection(key);
+  Toast.success(`Updated ${SECTION_DEFS[key]?.title || key}`);
+}
+
+// Toggle and submit regeneration
+function toggleRegenInput(key) {
+  const box = document.getElementById(`regen-box-${key}`);
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function submitRegenerate(key) {
+  const promptInput = document.getElementById(`regen-prompt-${key}`);
+  const instructions = promptInput ? promptInput.value.trim() : '';
+  const regenBtn = document.getElementById(`regen-btn-${key}`);
+
+  setLoading(regenBtn, true, '🔄 Regenerate');
+
+  try {
+    const response = await fetch('/api/practical/regenerate-section', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section_key: key,
+        subject: currentPractical.subject,
+        title: currentPractical.title,
+        question: currentPractical.question,
+        language: currentPractical.language,
+        existing_sections: currentPractical.sections,
+        additional_instructions: instructions || null
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Regeneration failed');
+    }
+
+    currentPractical.sections[key] = data.content;
+    const displayEl = document.getElementById(`body-display-${key}`);
+    const textarea = document.getElementById(`edit-textarea-${key}`);
+
+    displayEl.innerHTML = formatSectionContent(key, data.content);
+    if (textarea) textarea.value = data.content;
+
+    toggleRegenInput(key);
+    Toast.success(`Regenerated ${SECTION_DEFS[key]?.title || key}`);
+
+  } catch (err) {
+    Toast.error(err.message || 'Regeneration failed');
+  } finally {
+    setLoading(regenBtn, false, '🔄 Regenerate');
+  }
+}
+
+// Save practical to database
+async function saveCurrentPractical() {
+  if (!currentPractical.title || Object.keys(currentPractical.sections).length === 0) {
+    Toast.error('No practical content to save');
+    return;
+  }
+
+  const saveBtn = document.getElementById('save-practical-btn');
+  setLoading(saveBtn, true, '💾 Save Practical');
+
+  try {
+    const isUpdate = Boolean(currentPractical.id);
+    const url = isUpdate ? `/api/practicals/${currentPractical.id}` : '/api/practicals';
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    const resp = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: currentPractical.subject,
+        practical_number: currentPractical.practical_number || null,
+        title: currentPractical.title,
+        question: currentPractical.question,
+        language: currentPractical.language || null,
+        sections: currentPractical.sections
+      })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data.detail || 'Failed to save practical');
+    }
+
+    if (data.id) {
+      currentPractical.id = data.id;
+      document.getElementById('editing-practical-id').value = data.id;
+    }
+
+    Toast.success(data.message || 'Practical saved to your library!');
+
+  } catch (err) {
+    Toast.error(err.message || 'Failed to save practical');
+  } finally {
+    setLoading(saveBtn, false, '💾 Save Practical');
+  }
+}
+
+// Copy single section
+function copySection(key) {
+  const content = currentPractical.sections[key];
+  if (!content) {
+    Toast.error('Section is empty');
+    return;
+  }
+  copyToClipboard(content);
+}
+
+// Copy entire practical formatted as Markdown
+function copyEntirePractical() {
+  const md = buildFullMarkdown();
+  copyToClipboard(md);
+}
+
+// Download practical as file
+function downloadPractical(format) {
+  if (currentPractical.id) {
+    window.location.href = `/api/practicals/${currentPractical.id}/export?format=${format}`;
+  } else {
+    // Client-side download if not yet saved
+    const text = format === 'markdown' ? buildFullMarkdown() : buildFullPlainText();
+    const blob = new Blob([text], { type: format === 'markdown' ? 'text/markdown' : 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Practical_${currentPractical.practical_number || 'lab'}_${currentPractical.subject.replace(/\s+/g, '_')}.${format === 'markdown' ? 'md' : 'txt'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    Toast.success(`Downloaded .${format === 'markdown' ? 'md' : 'txt'}`);
+  }
+}
+
+function buildFullMarkdown() {
+  const p = currentPractical;
+  const lines = [
+    `# Practical ${p.practical_number ? '#' + p.practical_number + ': ' : ''}${p.title}\n`,
+    `**Subject:** ${p.subject}  `,
+    p.language ? `**Language:** ${p.language}  ` : '',
+    `\n### Problem Statement\n${p.question}\n\n---\n`
+  ];
+
+  for (const [key, content] of Object.entries(p.sections)) {
+    const meta = SECTION_DEFS[key] || { title: key };
+    lines.push(`## ${meta.title}\n\n${content}\n\n`);
+  }
+
+  return lines.join('\n');
+}
+
+function buildFullPlainText() {
+  const p = currentPractical;
+  const lines = [
+    '='.repeat(60),
+    `Practical ${p.practical_number ? '#' + p.practical_number + ': ' : ''}${p.title}`,
+    '='.repeat(60),
+    `Subject: ${p.subject}`,
+    p.language ? `Language: ${p.language}` : '',
+    `\nProblem Statement:\n${p.question}\n`,
+    '-'.repeat(60)
+  ];
+
+  for (const [key, content] of Object.entries(p.sections)) {
+    const meta = SECTION_DEFS[key] || { title: key };
+    lines.push(`\n[${meta.title.toUpperCase()}]\n${content}\n`);
+    lines.push('-'.repeat(40));
+  }
+
+  return lines.join('\n');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>
+{% endblock %}

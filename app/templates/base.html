@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI LabMate — Private, local-first AI assistant for engineering students">
+  <title>{% block title %}AI LabMate{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle navigation">☰</button>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" style="display:none; position:fixed; inset:0; background:var(--bg-overlay); z-index:99;"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__logo">
+        <div class="sidebar__logo-icon">⚡</div>
+        <div class="sidebar__logo-text">AI Lab<span>Mate</span></div>
+      </div>
+
+      <nav class="sidebar__nav" aria-label="Main navigation">
+        <div class="sidebar__section-label">Main</div>
+
+        <a href="/" class="sidebar__link {% if page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+          <span class="sidebar__icon">⬡</span>
+          Dashboard
+        </a>
+
+        <a href="/practical-studio" class="sidebar__link {% if page == 'practical-studio' %}active{% endif %}" id="nav-practical">
+          <span class="sidebar__icon">📝</span>
+          Practical Studio
+        </a>
+
+        <a href="/code-lab" class="sidebar__link {% if page == 'code-lab' %}active{% endif %}" id="nav-codelab">
+          <span class="sidebar__icon">⟨⟩</span>
+          Code Lab
+        </a>
+
+        <a href="/viva-arena" class="sidebar__link {% if page == 'viva-arena' %}active{% endif %}" id="nav-viva">
+          <span class="sidebar__icon">🎯</span>
+          Viva Arena
+        </a>
+
+        <div class="sidebar__section-label">Library</div>
+
+        <a href="/my-practicals" class="sidebar__link {% if page == 'my-practicals' %}active{% endif %}" id="nav-saved">
+          <span class="sidebar__icon">📂</span>
+          My Practicals
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <div class="sidebar__status" id="sidebar-status">
+          <span class="status-dot checking" id="sidebar-status-dot"></span>
+          <span id="sidebar-status-label">Checking AI...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      {% if error_title is defined and error_title %}
+        <div class="empty-state" style="min-height: 60vh;">
+          <div class="empty-state__icon">⚠</div>
+          <div class="empty-state__title">{{ error_title }}</div>
+          <div class="empty-state__text">{{ error_message }}</div>
+          <a href="/" class="btn btn--secondary mt-md">Back to Dashboard</a>
+        </div>
+      {% else %}
+        {% block content %}{% endblock %}
+      {% endif %}
+    </main>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

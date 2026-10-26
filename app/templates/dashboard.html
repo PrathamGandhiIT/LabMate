@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — AI LabMate{% endblock %}
+
+{% block content %}
+<!-- Welcome -->
+<div class="dashboard-welcome">
+  <h1 class="dashboard-welcome__greeting">Welcome to AI LabMate</h1>
+  <p class="dashboard-welcome__sub">Your private, local AI assistant for practicals, code, and viva prep.</p>
+</div>
+
+<!-- AI Status -->
+<div class="ai-status-card" id="ai-status-card">
+  <div class="ai-status-card__indicator">
+    <span class="status-dot checking" id="ai-status-dot"></span>
+    <span class="ai-status-card__text" id="ai-status-label">Checking AI connection...</span>
+  </div>
+  <span class="ai-status-card__model" id="ai-model-label"></span>
+  <button class="btn btn--ghost btn--sm" id="ai-retry-btn">Retry</button>
+</div>
+
+<!-- Quick Actions -->
+<div class="section-header">
+  <div>
+    <h2 class="section-title">Quick Actions</h2>
+    <p class="section-subtitle">Jump into a workflow</p>
+  </div>
+</div>
+
+<div class="quick-actions">
+  <a href="/practical-studio" class="quick-action-card" id="action-practical">
+    <div class="card__icon card__icon--lime">📝</div>
+    <div class="quick-action-card__body">
+      <div class="quick-action-card__title">Generate Practical</div>
+      <div class="quick-action-card__desc">Create structured practical-file content with AI — aim, code, theory, viva questions, and more.</div>
+    </div>
+  </a>
+
+  <a href="/code-lab" class="quick-action-card" id="action-codelab">
+    <div class="card__icon card__icon--violet">⟨⟩</div>
+    <div class="quick-action-card__body">
+      <div class="quick-action-card__title">Explain Code</div>
+      <div class="quick-action-card__desc">Understand, debug, or dry-run any program. Get a clear walkthrough and viva questions.</div>
+    </div>
+  </a>
+
+  <a href="/viva-arena" class="quick-action-card" id="action-viva">
+    <div class="card__icon card__icon--orange">🎯</div>
+    <div class="quick-action-card__body">
+      <div class="quick-action-card__title">Viva Prep</div>
+      <div class="quick-action-card__desc">Quick revision, rapid-fire Q&A, or a full mock viva. Practice before the real exam.</div>
+    </div>
+  </a>
+</div>
+
+<!-- Recent Practicals -->
+<div class="section-header">
+  <div>
+    <h2 class="section-title">Recent Practicals</h2>
+    <p class="section-subtitle">Continue where you left off</p>
+  </div>
+  {% if recent_practicals %}
+  <a href="/my-practicals" class="btn btn--ghost btn--sm">View All →</a>
+  {% endif %}
+</div>
+
+<div class="card">
+  {% if recent_practicals %}
+    {% for p in recent_practicals %}
+    <a href="/my-practicals" class="practical-item" id="practical-{{ p.id }}">
+      <div class="card__icon card__icon--lime" style="width:32px;height:32px;font-size:0.85rem;">📄</div>
+      <div class="practical-item__info">
+        <div class="practical-item__title">{{ p.title }}</div>
+        <div class="practical-item__meta">
+          {{ p.subject }}
+          {% if p.practical_number %} · #{{ p.practical_number }}{% endif %}
+          {% if p.language %} · {{ p.language }}{% endif %}
+          · {{ p.updated_at }}
+        </div>
+      </div>
+      <span class="practical-item__arrow">→</span>
+    </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state__icon">📚</div>
+      <div class="empty-state__title">No practicals yet</div>
+      <div class="empty-state__text">Generate your first practical to see it here. Your work is saved locally and stays private.</div>
+      <a href="/practical-studio" class="btn btn--primary btn--sm mt-md">Create First Practical</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
