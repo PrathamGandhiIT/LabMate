@@ -3,17 +3,948 @@
 {% block title %}My Practicals — AI LabMate{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">My Practicals</h1>
-  <p class="page-subtitle">Your saved practicals — search, filter, and continue your work.</p>
-</div>
-
-<div class="card">
-  <div class="empty-state">
-    <div class="empty-state__icon">📂</div>
-    <div class="empty-state__title">My Practicals</div>
-    <div class="empty-state__text">Saving, searching, filtering, and managing practicals is coming in Milestone 5.</div>
-    <span class="coming-soon__badge mt-md">🚧 Coming in Milestone 5</span>
+<!-- Page Header -->
+<div class="practicals-header">
+  <div>
+    <h1 class="page-title">My Practicals</h1>
+    <p class="page-subtitle">Search, filter, preview, and organize your saved laboratory experiments.</p>
+  </div>
+  <div class="flex gap-sm">
+    <a href="/practical-studio" class="btn btn--primary btn--sm" id="btn-create-practical">
+      <span>+</span> New Practical
+    </a>
   </div>
 </div>
+
+<!-- Stats Bar -->
+<div class="practicals-stats-bar" id="stats-bar">
+  <div class="stat-chip">
+    <span>Total Practicals:</span>
+    <span class="stat-chip__num" id="total-count-num">{{ total_count }}</span>
+  </div>
+  <div class="stat-chip">
+    <span>Subjects:</span>
+    <span class="stat-chip__num" id="subjects-count-num">{{ subjects|length }}</span>
+  </div>
+  <div class="stat-chip" style="margin-left:auto;">
+    <span>Showing:</span>
+    <span class="stat-chip__num" id="visible-count-num">{{ practicals|length }}</span>
+  </div>
+</div>
+
+<!-- Batch Action Toolbar (shown when 1+ checkboxes selected) -->
+<div class="batch-bar" id="batch-bar">
+  <div class="flex items-center gap-md">
+    <input type="checkbox" id="select-all-checkbox" class="practical-card__checkbox" title="Select all visible practicals" />
+    <span class="batch-bar__count" id="batch-selected-count">0 selected</span>
+  </div>
+  <div class="flex items-center gap-sm">
+    <button class="btn btn--danger btn--sm" id="btn-batch-delete">
+      <span>🗑️</span> Delete Selected
+    </button>
+    <button class="btn btn--ghost btn--sm" id="btn-batch-deselect">
+      Deselect All
+    </button>
+  </div>
+</div>
+
+<!-- Controls & Filter Toolbar -->
+<div class="practicals-toolbar" id="practicals-toolbar">
+  <!-- Search Row -->
+  <div class="toolbar-row">
+    <div class="search-input-wrapper">
+      <span class="search-input-icon">🔍</span>
+      <input
+        type="text"
+        id="practical-search"
+        class="search-input"
+        placeholder="Search practicals by title, subject, language, or question... (Press '/' to focus)"
+        value="{{ search_query }}"
+        autocomplete="off"
+      />
+      <button class="search-clear-btn" id="search-clear-btn" aria-label="Clear search">✕</button>
+    </div>
+
+    <!-- Language Filter Dropdown -->
+    <div style="min-width: 150px;">
+      <select id="language-filter" class="form-select" style="height:40px; margin:0;">
+        <option value="all">All Languages</option>
+        {% for lang in languages %}
+        <option value="{{ lang }}" {% if active_language == lang %}selected{% endif %}>{{ lang }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Sort Dropdown -->
+    <div style="min-width: 170px;">
+      <select id="sort-select" class="form-select" style="height:40px; margin:0;">
+        <option value="updated_desc">Recently Updated</option>
+        <option value="updated_asc">Oldest Updated</option>
+        <option value="number_asc">Practical # (Asc)</option>
+        <option value="title_asc">Title (A-Z)</option>
+        <option value="subject_asc">Subject (A-Z)</option>
+      </select>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="view-toggle-group">
+      <button class="view-toggle-btn active" id="btn-view-grid" title="Grid View">⊞</button>
+      <button class="view-toggle-btn" id="btn-view-table" title="Table View">☰</button>
+    </div>
+  </div>
+
+  <!-- Subject Filter Pills -->
+  {% if subjects %}
+  <div class="filter-pills" id="subject-filter-pills">
+    <button class="filter-pill {% if not active_subject %}active{% endif %}" data-subject="all">
+      All Subjects ({{ total_count }})
+    </button>
+    {% for s in subjects %}
+    <button class="filter-pill {% if active_subject == s %}active{% endif %}" data-subject="{{ s }}">
+      {{ s }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Main Practicals Container -->
+<div id="practicals-container">
+
+  <!-- 1. Grid Cards View -->
+  <div class="practicals-grid" id="practicals-grid">
+    {% for p in practicals %}
+    <div
+      class="practical-card"
+      id="card-{{ p.id }}"
+      data-id="{{ p.id }}"
+      data-subject="{{ p.subject }}"
+      data-language="{{ p.language or '' }}"
+      data-title="{{ p.title }}"
+      data-number="{{ p.practical_number or '' }}"
+      data-updated="{{ p.updated_at }}"
+    >
+      <div class="practical-card__top">
+        <input
+          type="checkbox"
+          class="practical-card__checkbox item-checkbox"
+          data-id="{{ p.id }}"
+          title="Select practical #{{ p.id }}"
+        />
+        <div class="practical-card__badges">
+          <span class="badge-subject">{{ p.subject }}</span>
+          {% if p.practical_number %}
+          <span class="badge-pr-num">PR #{{ p.practical_number }}</span>
+          {% endif %}
+          {% if p.language %}
+          <span class="badge-lang">{{ p.language }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="practical-card__title" onclick="openPreview({{ p.id }})">
+        {{ p.title }}
+      </div>
+
+      <div class="practical-card__snippet">
+        {{ p.question }}
+      </div>
+
+      <div class="practical-card__sections-chips">
+        {% for sec in p.section_keys %}
+        <span class="section-mini-chip">{{ sec }}</span>
+        {% endfor %}
+      </div>
+
+      <div class="practical-card__footer">
+        <span class="practical-card__date">{{ p.updated_at }}</span>
+        <div class="card-actions-row">
+          <button class="action-icon-btn" onclick="openPreview({{ p.id }})" title="Quick Preview">👁️</button>
+          <a href="/practical-studio?edit_id={{ p.id }}" class="action-icon-btn" title="Edit in Studio">✏️</a>
+          <a href="/practicals({{ p.id }})/print" target="_blank" class="action-icon-btn" title="Print / PDF View" onclick="openPrintView(event, {{ p.id }})">🖨️</a>
+          <button class="action-icon-btn" onclick="duplicatePractical({{ p.id }})" title="Duplicate Practical">📑</button>
+          
+          <!-- Export Dropdown -->
+          <div class="action-dropdown">
+            <button class="action-icon-btn" onclick="toggleExportMenu(event, {{ p.id }})" title="Export options">⬇️</button>
+            <div class="action-dropdown-menu" id="export-menu-{{ p.id }}">
+              <a href="/api/practicals/{{ p.id }}/export?format=markdown" class="dropdown-item">
+                <span>📄</span> Markdown (.md)
+              </a>
+              <a href="/api/practicals/{{ p.id }}/export?format=txt" class="dropdown-item">
+                <span>📝</span> Plain Text (.txt)
+              </a>
+              <a href="/api/practicals/{{ p.id }}/export?format=json" class="dropdown-item">
+                <span>💾</span> JSON Backup (.json)
+              </a>
+            </div>
+          </div>
+
+          <button class="action-icon-btn action-icon-btn--danger" onclick="confirmDeleteSingle({{ p.id }}, '{{ p.title|escape }}')" title="Delete practical">🗑️</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- 2. Table / List View -->
+  <div class="practicals-table-container" id="practicals-table-container">
+    <table class="practicals-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;">
+            <input type="checkbox" id="table-select-all" class="practical-card__checkbox" />
+          </th>
+          <th style="width: 70px;">Pr #</th>
+          <th>Title & Subject</th>
+          <th style="width: 120px;">Language</th>
+          <th style="width: 100px;">Sections</th>
+          <th style="width: 140px;">Last Updated</th>
+          <th style="width: 180px; text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="practicals-table-body">
+        {% for p in practicals %}
+        <tr
+          id="row-{{ p.id }}"
+          data-id="{{ p.id }}"
+          data-subject="{{ p.subject }}"
+          data-language="{{ p.language or '' }}"
+          data-title="{{ p.title }}"
+          data-number="{{ p.practical_number or '' }}"
+          data-updated="{{ p.updated_at }}"
+        >
+          <td>
+            <input type="checkbox" class="practical-card__checkbox item-checkbox" data-id="{{ p.id }}" />
+          </td>
+          <td>
+            <span class="badge-pr-num">#{{ p.practical_number or p.id }}</span>
+          </td>
+          <td>
+            <div style="font-weight:600; cursor:pointer;" onclick="openPreview({{ p.id }})">
+              {{ p.title }}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              <span class="badge-subject" style="font-size:10px;">{{ p.subject }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge-lang">{{ p.language or '—' }}</span>
+          </td>
+          <td>
+            <span style="font-size:12px; color:var(--text-secondary);">{{ p.section_count }} sections</span>
+          </td>
+          <td>
+            <span style="font-size:12px; color:var(--text-muted);">{{ p.updated_at }}</span>
+          </td>
+          <td style="text-align: right;">
+            <div class="card-actions-row" style="justify-content: flex-end;">
+              <button class="action-icon-btn" onclick="openPreview({{ p.id }})" title="Preview">👁️</button>
+              <a href="/practical-studio?edit_id={{ p.id }}" class="action-icon-btn" title="Edit">✏️</a>
+              <a href="/practicals/{{ p.id }}/print" target="_blank" class="action-icon-btn" title="Print / PDF">🖨️</a>
+              <button class="action-icon-btn" onclick="duplicatePractical({{ p.id }})" title="Duplicate">📑</button>
+              <button class="action-icon-btn action-icon-btn--danger" onclick="confirmDeleteSingle({{ p.id }}, '{{ p.title|escape }}')" title="Delete">🗑️</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. Empty States -->
+  <!-- Zero Practicals in DB -->
+  <div class="card" id="empty-state-db" style="{% if practicals %}display:none;{% endif %} margin-top:var(--space-lg);">
+    <div class="empty-state">
+      <div class="empty-state__icon">📂</div>
+      <div class="empty-state__title">No practicals saved yet</div>
+      <div class="empty-state__text">
+        Generate and save complete academic practical records with code, theory, and viva questions in Practical Studio.
+      </div>
+      <a href="/practical-studio" class="btn btn--primary btn--sm mt-md">
+        <span>+</span> Create First Practical
+      </a>
+    </div>
+  </div>
+
+  <!-- Zero Results from Active Filter -->
+  <div class="card" id="empty-state-search" style="display:none; margin-top:var(--space-lg);">
+    <div class="empty-state">
+      <div class="empty-state__icon">🔍</div>
+      <div class="empty-state__title">No matching practicals found</div>
+      <div class="empty-state__text">
+        We couldn't find any practicals matching your current search or filter criteria.
+      </div>
+      <button class="btn btn--secondary btn--sm mt-md" onclick="resetFilters()">
+        Clear All Filters
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Interactive Quick Preview Modal -->
+<div class="preview-modal" id="preview-modal" onclick="onModalBackdropClick(event)">
+  <div class="preview-dialog" onclick="event.stopPropagation()">
+    <div class="preview-dialog-header">
+      <div style="flex:1; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <span class="badge-subject" id="preview-badge-subject">Subject</span>
+          <span class="badge-pr-num" id="preview-badge-num">PR #--</span>
+          <span class="badge-lang" id="preview-badge-lang">Language</span>
+        </div>
+        <h2 id="preview-title" style="font-size:var(--text-lg); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-primary);">
+          Practical Preview
+        </h2>
+      </div>
+      
+      <div style="display:flex; align-items:center; gap:8px;">
+        <a id="preview-btn-edit" href="#" class="btn btn--secondary btn--sm">
+          <span>✏️</span> Edit in Studio
+        </a>
+        <a id="preview-btn-print" href="#" target="_blank" class="btn btn--ghost btn--sm">
+          <span>🖨️</span> Print / PDF
+        </a>
+        
+        <!-- Modal Export dropdown -->
+        <div class="action-dropdown">
+          <button class="btn btn--ghost btn--sm" onclick="toggleModalExportMenu(event)">
+            <span>⬇️</span> Export
+          </button>
+          <div class="action-dropdown-menu" id="modal-export-menu">
+            <a id="modal-export-md" href="#" class="dropdown-item"><span>📄</span> Markdown (.md)</a>
+            <a id="modal-export-txt" href="#" class="dropdown-item"><span>📝</span> Plain Text (.txt)</a>
+            <a id="modal-export-json" href="#" class="dropdown-item"><span>💾</span> JSON (.json)</a>
+          </div>
+        </div>
+
+        <button class="btn btn--ghost btn--sm" onclick="closePreview()" style="font-size:16px; padding:4px 8px;" title="Close preview (Esc)">✕</button>
+      </div>
+    </div>
+
+    <!-- Preview Content Body -->
+    <div class="preview-dialog-body" id="preview-dialog-body">
+      <div style="text-align:center; padding:40px; color:var(--text-muted);" id="preview-loading">
+        Loading practical details...
+      </div>
+      <div id="preview-content-rendered" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Single Delete Confirm Modal -->
+<div class="confirm-modal" id="delete-confirm-modal">
+  <div class="confirm-dialog">
+    <div style="font-size:var(--text-lg); font-weight:700; margin-bottom:8px; color:var(--text-primary);">
+      Delete Practical?
+    </div>
+    <div style="font-size:var(--text-sm); color:var(--text-secondary); margin-bottom:var(--space-lg); line-height:1.5;">
+      Are you sure you want to delete <strong id="delete-item-title" style="color:var(--text-primary);"></strong>?
+      This action cannot be undone.
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:var(--space-sm);">
+      <button class="btn btn--ghost btn--sm" onclick="closeDeleteConfirm()">Cancel</button>
+      <button class="btn btn--danger btn--sm" id="confirm-delete-action-btn">Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- Batch Delete Confirm Modal -->
+<div class="confirm-modal" id="batch-delete-modal">
+  <div class="confirm-dialog">
+    <div style="font-size:var(--text-lg); font-weight:700; margin-bottom:8px; color:var(--text-primary);">
+      Delete Selected Practicals?
+    </div>
+    <div style="font-size:var(--text-sm); color:var(--text-secondary); margin-bottom:var(--space-lg); line-height:1.5;">
+      Are you sure you want to delete <strong id="batch-delete-count-text" style="color:var(--color-error);">0 practicals</strong>?
+      This will permanently remove them from your local database.
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:var(--space-sm);">
+      <button class="btn btn--ghost btn--sm" onclick="closeBatchDeleteConfirm()">Cancel</button>
+      <button class="btn btn--danger btn--sm" id="confirm-batch-delete-btn">Delete All Selected</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block head %}
+<script>
+'use strict';
+
+/**
+ * Milestone 5 — My Practicals Management Client
+ */
+let practicalsData = [];
+let activeSubject = 'all';
+let activeLanguage = 'all';
+let currentSearch = '';
+let currentSort = 'updated_desc';
+let selectedIds = new Set();
+let pendingDeleteId = null;
+
+// Section meta map
+const SECTION_TITLES = {
+  aim: 'Aim / Problem Statement',
+  theory: 'Theory & Background',
+  algorithm: 'Step-by-Step Algorithm',
+  code: 'Program Code',
+  output: 'Sample Input / Output',
+  complexity: 'Complexity Analysis',
+  viva_questions: 'Viva Voce Questions & Answers',
+  precautions: 'Precautions & Best Practices'
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  initEventListeners();
+  updateStats();
+  applyFilters();
+});
+
+function initEventListeners() {
+  // Search input
+  const searchInput = document.getElementById('practical-search');
+  const clearBtn = document.getElementById('search-clear-btn');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentSearch = e.target.value.trim().toLowerCase();
+      clearBtn.style.display = currentSearch ? 'block' : 'none';
+      applyFilters();
+    });
+
+    // Keyboard shortcut: '/' focuses search
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== searchInput && !document.querySelector('.preview-modal.open')) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+      if (e.key === 'Escape') {
+        closePreview();
+        closeDeleteConfirm();
+        closeBatchDeleteConfirm();
+        closeAllDropdowns();
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      currentSearch = '';
+      clearBtn.style.display = 'none';
+      searchInput.focus();
+      applyFilters();
+    });
+  }
+
+  // Language filter
+  const langFilter = document.getElementById('language-filter');
+  if (langFilter) {
+    langFilter.addEventListener('change', (e) => {
+      activeLanguage = e.target.value;
+      applyFilters();
+    });
+  }
+
+  // Sort filter
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', (e) => {
+      currentSort = e.target.value;
+      sortPracticals();
+    });
+  }
+
+  // Subject pills
+  const pillsContainer = document.getElementById('subject-filter-pills');
+  if (pillsContainer) {
+    pillsContainer.addEventListener('click', (e) => {
+      const pill = e.target.closest('.filter-pill');
+      if (!pill) return;
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeSubject = pill.dataset.subject;
+      applyFilters();
+    });
+  }
+
+  // View toggle
+  const btnGrid = document.getElementById('btn-view-grid');
+  const btnTable = document.getElementById('btn-view-table');
+  const gridContainer = document.getElementById('practicals-grid');
+  const tableContainer = document.getElementById('practicals-table-container');
+
+  if (btnGrid && btnTable) {
+    btnGrid.addEventListener('click', () => {
+      btnGrid.classList.add('active');
+      btnTable.classList.remove('active');
+      gridContainer.style.display = 'grid';
+      tableContainer.style.display = 'none';
+    });
+
+    btnTable.addEventListener('click', () => {
+      btnTable.classList.add('active');
+      btnGrid.classList.remove('active');
+      gridContainer.style.display = 'none';
+      tableContainer.style.display = 'block';
+    });
+  }
+
+  // Checkbox interactions
+  document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('item-checkbox')) {
+      const id = parseInt(e.target.dataset.id, 10);
+      if (e.target.checked) {
+        selectedIds.add(id);
+      } else {
+        selectedIds.delete(id);
+      }
+      syncCheckboxes();
+      updateBatchBar();
+    }
+  });
+
+  // Select all checkboxes
+  const selectAll = document.getElementById('select-all-checkbox');
+  const tableSelectAll = document.getElementById('table-select-all');
+
+  function handleSelectAll(checked) {
+    const visibleCards = document.querySelectorAll('.practical-card:not([style*="display: none"])');
+    visibleCards.forEach(card => {
+      const id = parseInt(card.dataset.id, 10);
+      if (checked) {
+        selectedIds.add(id);
+      } else {
+        selectedIds.delete(id);
+      }
+    });
+    syncCheckboxes();
+    updateBatchBar();
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', (e) => handleSelectAll(e.target.checked));
+  }
+  if (tableSelectAll) {
+    tableSelectAll.addEventListener('change', (e) => handleSelectAll(e.target.checked));
+  }
+
+  // Batch actions
+  const btnDeselect = document.getElementById('btn-batch-deselect');
+  if (btnDeselect) {
+    btnDeselect.addEventListener('click', () => {
+      selectedIds.clear();
+      syncCheckboxes();
+      updateBatchBar();
+    });
+  }
+
+  const btnBatchDelete = document.getElementById('btn-batch-delete');
+  if (btnBatchDelete) {
+    btnBatchDelete.addEventListener('click', () => {
+      if (selectedIds.size === 0) return;
+      document.getElementById('batch-delete-count-text').textContent = `${selectedIds.size} practical(s)`;
+      document.getElementById('batch-delete-modal').classList.add('open');
+    });
+  }
+
+  const confirmBatchBtn = document.getElementById('confirm-batch-delete-btn');
+  if (confirmBatchBtn) {
+    confirmBatchBtn.addEventListener('click', executeBatchDelete);
+  }
+
+  const confirmSingleBtn = document.getElementById('confirm-delete-action-btn');
+  if (confirmSingleBtn) {
+    confirmSingleBtn.addEventListener('click', executeSingleDelete);
+  }
+
+  // Global click closes dropdowns
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.action-dropdown')) {
+      closeAllDropdowns();
+    }
+  });
+}
+
+// ---------------------------------------------------------------------
+// Filtering & Sorting
+// ---------------------------------------------------------------------
+
+function applyFilters() {
+  const cards = document.querySelectorAll('.practical-card');
+  const rows = document.querySelectorAll('#practicals-table-body tr');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    const id = card.dataset.id;
+    const subject = card.dataset.subject || '';
+    const lang = card.dataset.language || '';
+    const title = (card.dataset.title || '').toLowerCase();
+    const num = (card.dataset.number || '').toLowerCase();
+    const snippet = (card.querySelector('.practical-card__snippet')?.textContent || '').toLowerCase();
+
+    // Subject match
+    const matchSubject = activeSubject === 'all' || subject.toLowerCase() === activeSubject.toLowerCase();
+
+    // Language match
+    const matchLang = activeLanguage === 'all' || lang.toLowerCase() === activeLanguage.toLowerCase();
+
+    // Search match
+    const matchSearch = !currentSearch ||
+      title.includes(currentSearch) ||
+      subject.toLowerCase().includes(currentSearch) ||
+      lang.toLowerCase().includes(currentSearch) ||
+      num.includes(currentSearch) ||
+      snippet.includes(currentSearch);
+
+    const isVisible = matchSubject && matchLang && matchSearch;
+    card.style.display = isVisible ? 'flex' : 'none';
+
+    // Corresponding table row
+    const row = document.getElementById(`row-${id}`);
+    if (row) {
+      row.style.display = isVisible ? '' : 'none';
+    }
+
+    if (isVisible) visibleCount++;
+  });
+
+  // Update visible counter
+  const visibleNum = document.getElementById('visible-count-num');
+  if (visibleNum) visibleNum.textContent = visibleCount;
+
+  // Handle empty states
+  const totalCards = cards.length;
+  const emptyDb = document.getElementById('empty-state-db');
+  const emptySearch = document.getElementById('empty-state-search');
+  const toolbar = document.getElementById('practicals-toolbar');
+  const statsBar = document.getElementById('stats-bar');
+
+  if (totalCards === 0) {
+    if (emptyDb) emptyDb.style.display = 'block';
+    if (emptySearch) emptySearch.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    if (statsBar) statsBar.style.display = 'none';
+  } else {
+    if (emptyDb) emptyDb.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'flex';
+    if (statsBar) statsBar.style.display = 'flex';
+
+    if (visibleCount === 0) {
+      if (emptySearch) emptySearch.style.display = 'block';
+    } else {
+      if (emptySearch) emptySearch.style.display = 'none';
+    }
+  }
+
+  sortPracticals();
+}
+
+function sortPracticals() {
+  const grid = document.getElementById('practicals-grid');
+  const tableBody = document.getElementById('practicals-table-body');
+  if (!grid || !tableBody) return;
+
+  const cards = Array.from(grid.querySelectorAll('.practical-card'));
+  const rows = Array.from(tableBody.querySelectorAll('tr'));
+
+  function comparator(a, b) {
+    if (currentSort === 'title_asc') {
+      return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+    } else if (currentSort === 'subject_asc') {
+      return (a.dataset.subject || '').localeCompare(b.dataset.subject || '');
+    } else if (currentSort === 'number_asc') {
+      const numA = parseInt(a.dataset.number || '0', 10) || 0;
+      const numB = parseInt(b.dataset.number || '0', 10) || 0;
+      return numA - numB;
+    } else if (currentSort === 'updated_asc') {
+      return (a.dataset.updated || '').localeCompare(b.dataset.updated || '');
+    } else {
+      // updated_desc default
+      return (b.dataset.updated || '').localeCompare(a.dataset.updated || '');
+    }
+  }
+
+  cards.sort(comparator).forEach(c => grid.appendChild(c));
+  rows.sort(comparator).forEach(r => tableBody.appendChild(r));
+}
+
+function resetFilters() {
+  const searchInput = document.getElementById('practical-search');
+  if (searchInput) searchInput.value = '';
+  currentSearch = '';
+  activeSubject = 'all';
+  activeLanguage = 'all';
+
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.subject === 'all');
+  });
+
+  const langFilter = document.getElementById('language-filter');
+  if (langFilter) langFilter.value = 'all';
+
+  applyFilters();
+}
+
+function updateStats() {
+  const total = document.querySelectorAll('.practical-card').length;
+  const totalNum = document.getElementById('total-count-num');
+  if (totalNum) totalNum.textContent = total;
+}
+
+// ---------------------------------------------------------------------
+// Selection & Batch Actions
+// ---------------------------------------------------------------------
+
+function syncCheckboxes() {
+  document.querySelectorAll('.item-checkbox').forEach(cb => {
+    const id = parseInt(cb.dataset.id, 10);
+    cb.checked = selectedIds.has(id);
+    const card = document.getElementById(`card-${id}`);
+    if (card) card.classList.toggle('selected', selectedIds.has(id));
+  });
+
+  const selectAll = document.getElementById('select-all-checkbox');
+  const tableSelectAll = document.getElementById('table-select-all');
+  const visibleCards = document.querySelectorAll('.practical-card:not([style*="display: none"])');
+  const allSelected = visibleCards.length > 0 && Array.from(visibleCards).every(c => selectedIds.has(parseInt(c.dataset.id, 10)));
+
+  if (selectAll) selectAll.checked = allSelected;
+  if (tableSelectAll) tableSelectAll.checked = allSelected;
+}
+
+function updateBatchBar() {
+  const batchBar = document.getElementById('batch-bar');
+  const countLabel = document.getElementById('batch-selected-count');
+  if (!batchBar || !countLabel) return;
+
+  if (selectedIds.size > 0) {
+    batchBar.classList.add('visible');
+    countLabel.textContent = `${selectedIds.size} practical${selectedIds.size > 1 ? 's' : ''} selected`;
+  } else {
+    batchBar.classList.remove('visible');
+  }
+}
+
+async function executeBatchDelete() {
+  if (selectedIds.size === 0) return;
+  const btn = document.getElementById('confirm-batch-delete-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+
+  try {
+    const res = await fetch('/api/practicals/batch-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(selectedIds) })
+    });
+
+    if (!res.ok) throw new Error('Failed to delete practicals');
+
+    selectedIds.forEach(id => {
+      document.getElementById(`card-${id}`)?.remove();
+      document.getElementById(`row-${id}`)?.remove();
+    });
+
+    Toast.success(`Successfully deleted ${selectedIds.size} practical(s)`);
+    selectedIds.clear();
+    closeBatchDeleteConfirm();
+    updateBatchBar();
+    updateStats();
+    applyFilters();
+  } catch (err) {
+    Toast.error(err.message || 'Error deleting practicals');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Delete All Selected';
+  }
+}
+
+// ---------------------------------------------------------------------
+// Single Item CRUD Operations
+// ---------------------------------------------------------------------
+
+function confirmDeleteSingle(id, title) {
+  pendingDeleteId = id;
+  document.getElementById('delete-item-title').textContent = `"${title}"`;
+  document.getElementById('delete-confirm-modal').classList.add('open');
+}
+
+function closeDeleteConfirm() {
+  pendingDeleteId = null;
+  document.getElementById('delete-confirm-modal').classList.remove('open');
+}
+
+function closeBatchDeleteConfirm() {
+  document.getElementById('batch-delete-modal').classList.remove('open');
+}
+
+async function executeSingleDelete() {
+  if (!pendingDeleteId) return;
+  const btn = document.getElementById('confirm-delete-action-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+
+  try {
+    const res = await fetch(`/api/practicals/${pendingDeleteId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete practical');
+
+    document.getElementById(`card-${pendingDeleteId}`)?.remove();
+    document.getElementById(`row-${pendingDeleteId}`)?.remove();
+    selectedIds.delete(pendingDeleteId);
+
+    Toast.success('Practical deleted successfully');
+    closeDeleteConfirm();
+    updateBatchBar();
+    updateStats();
+    applyFilters();
+  } catch (err) {
+    Toast.error(err.message || 'Error deleting practical');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Delete Permanently';
+  }
+}
+
+async function duplicatePractical(id) {
+  try {
+    const res = await fetch(`/api/practicals/${id}/duplicate`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to duplicate practical');
+    const data = await res.json();
+    Toast.success(data.message || 'Practical duplicated!');
+    setTimeout(() => window.location.reload(), 400);
+  } catch (err) {
+    Toast.error(err.message || 'Error duplicating practical');
+  }
+}
+
+// ---------------------------------------------------------------------
+// Preview Modal
+// ---------------------------------------------------------------------
+
+async function openPreview(id) {
+  const modal = document.getElementById('preview-modal');
+  const loading = document.getElementById('preview-loading');
+  const rendered = document.getElementById('preview-content-rendered');
+
+  modal.classList.add('open');
+  loading.style.display = 'block';
+  rendered.style.display = 'none';
+  rendered.innerHTML = '';
+
+  // Setup header buttons
+  document.getElementById('preview-btn-edit').href = `/practical-studio?edit_id=${id}`;
+  document.getElementById('preview-btn-print').href = `/practicals/${id}/print`;
+  document.getElementById('modal-export-md').href = `/api/practicals/${id}/export?format=markdown`;
+  document.getElementById('modal-export-txt').href = `/api/practicals/${id}/export?format=txt`;
+  document.getElementById('modal-export-json').href = `/api/practicals/${id}/export?format=json`;
+
+  try {
+    const res = await fetch(`/api/practicals/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch practical details');
+    const p = await res.json();
+
+    document.getElementById('preview-title').textContent = p.title;
+    document.getElementById('preview-badge-subject').textContent = p.subject;
+    document.getElementById('preview-badge-num').textContent = p.practical_number ? `PR #${p.practical_number}` : `PR #${p.id}`;
+    document.getElementById('preview-badge-lang').textContent = p.language || 'Standard';
+
+    // Render Question / Aim
+    let html = `
+      <div class="preview-section-block">
+        <div class="preview-section-header">
+          <span class="preview-section-title">Problem Statement</span>
+          <button class="copy-mini-btn" onclick="copyText(${JSON.stringify(p.question)})">Copy</button>
+        </div>
+        <div class="preview-section-content" style="color:var(--text-primary); font-weight:500;">${escapeHtml(p.question)}</div>
+      </div>
+    `;
+
+    // Render structured sections
+    const sections = p.sections || {};
+    for (const [key, title] of Object.entries(SECTION_TITLES)) {
+      if (sections[key] && sections[key].trim()) {
+        const content = sections[key];
+        const isCode = key === 'code' || key === 'output';
+
+        html += `
+          <div class="preview-section-block">
+            <div class="preview-section-header">
+              <span class="preview-section-title">${title}</span>
+              <button class="copy-mini-btn" onclick="copyText(${JSON.stringify(content)})">Copy ${isCode ? 'Code' : 'Section'}</button>
+            </div>
+            ${
+              isCode
+                ? `<pre class="preview-code-block">${escapeHtml(content)}</pre>`
+                : `<div class="preview-section-content">${escapeHtml(content)}</div>`
+            }
+          </div>
+        `;
+      }
+    }
+
+    rendered.innerHTML = html;
+    loading.style.display = 'none';
+    rendered.style.display = 'block';
+  } catch (err) {
+    loading.textContent = `Error loading practical: ${err.message}`;
+  }
+}
+
+function closePreview() {
+  document.getElementById('preview-modal').classList.remove('open');
+  closeAllDropdowns();
+}
+
+function onModalBackdropClick(e) {
+  if (e.target.id === 'preview-modal') {
+    closePreview();
+  }
+}
+
+function openPrintView(e, id) {
+  // Let regular link navigation work, or opens in new tab
+}
+
+// ---------------------------------------------------------------------
+// Dropdown Helpers
+// ---------------------------------------------------------------------
+
+function toggleExportMenu(e, id) {
+  e.stopPropagation();
+  closeAllDropdowns();
+  const menu = document.getElementById(`export-menu-${id}`);
+  if (menu) menu.classList.toggle('open');
+}
+
+function toggleModalExportMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('modal-export-menu');
+  if (menu) menu.classList.toggle('open');
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.action-dropdown-menu').forEach(m => m.classList.remove('open'));
+}
+
+function copyText(str) {
+  navigator.clipboard.writeText(str).then(() => {
+    Toast.success('Copied to clipboard!');
+  }).catch(() => {
+    Toast.error('Could not copy to clipboard.');
+  });
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>
 {% endblock %}

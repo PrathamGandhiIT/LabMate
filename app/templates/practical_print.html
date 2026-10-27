@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Practical #{{ practical.practical_number or practical.id }} — {{ practical.title }}</title>
+  <style>
+    :root {
+      --font-body: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'Consolas', 'Courier New', Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #111;
+      background: #f3f4f6;
+      padding: 20px;
+    }
+
+    /* Screen Action Bar */
+    .screen-bar {
+      max-width: 820px;
+      margin: 0 auto 20px auto;
+      background: #18181b;
+      color: #f4f4f5;
+      padding: 12px 20px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .screen-bar a, .screen-bar button {
+      background: #27272a;
+      color: #f4f4f5;
+      border: 1px solid #3f3f46;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .screen-bar a:hover, .screen-bar button:hover {
+      background: #3f3f46;
+    }
+
+    .screen-bar .btn-print {
+      background: #84cc16;
+      color: #09090b;
+      border-color: #84cc16;
+      font-weight: 600;
+    }
+
+    .screen-bar .btn-print:hover {
+      background: #a3e635;
+    }
+
+    /* Printable Page Container */
+    .print-page {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px 50px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border-radius: 4px;
+    }
+
+    /* Academic Header */
+    .academic-header {
+      text-align: center;
+      border-bottom: 2px solid #111;
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+
+    .academic-header h1 {
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .academic-header h2 {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+
+    .academic-header .journal-title {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 14px;
+      background: #111;
+      color: #fff;
+      font-size: 10pt;
+      font-weight: 600;
+      letter-spacing: 1px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    /* Metadata Table */
+    .metadata-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 10pt;
+    }
+
+    .metadata-table td {
+      border: 1px solid #777;
+      padding: 6px 10px;
+      vertical-align: middle;
+    }
+
+    .metadata-table .label {
+      font-weight: 600;
+      background: #f8f9fa;
+      width: 18%;
+      color: #222;
+    }
+
+    .metadata-table .value {
+      width: 32%;
+    }
+
+    /* Section styling */
+    .doc-section {
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+
+    .doc-section-title {
+      font-size: 11pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-left: 4px solid #111;
+      padding-left: 8px;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .doc-section-body {
+      font-size: 10.5pt;
+      line-height: 1.6;
+      color: #222;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      padding-left: 12px;
+    }
+
+    /* Code listing */
+    .code-listing {
+      background: #fbfbfb;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 9pt;
+      line-height: 1.45;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #050505;
+      margin-top: 6px;
+    }
+
+    /* Faculty Evaluation Box */
+    .faculty-box {
+      margin-top: 40px;
+      border: 1px solid #777;
+      page-break-inside: avoid;
+    }
+
+    .faculty-header {
+      background: #f1f3f5;
+      padding: 6px 12px;
+      font-weight: 700;
+      font-size: 10pt;
+      border-bottom: 1px solid #777;
+      text-transform: uppercase;
+    }
+
+    .faculty-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      font-size: 9.5pt;
+    }
+
+    .faculty-cell {
+      padding: 14px 10px;
+      border-right: 1px solid #777;
+      text-align: center;
+    }
+
+    .faculty-cell:last-child {
+      border-right: none;
+    }
+
+    .faculty-cell .cell-title {
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #444;
+    }
+
+    .faculty-cell .cell-val {
+      font-size: 11pt;
+      font-weight: 700;
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .screen-bar {
+        display: none !important;
+      }
+      .print-page {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+      .code-listing {
+        border-color: #666;
+        background: #fff;
+      }
+      @page {
+        size: A4;
+        margin: 15mm 15mm 15mm 15mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Floating Bar -->
+  <div class="screen-bar">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="/my-practicals">← Back to My Practicals</a>
+      <span style="font-size:13px; color:#a1a1aa;">Practical #{{ practical.practical_number or practical.id }}</span>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+      <a href="/practical-studio?edit_id={{ practical.id }}">✏️ Edit in Studio</a>
+    </div>
+  </div>
+
+  <!-- Print Page Container -->
+  <div class="print-page">
+
+    <!-- Academic Header -->
+    <header class="academic-header">
+      <h1>Department of Computer Science & Engineering</h1>
+      <h2>Laboratory Record & Experiment Journal</h2>
+      <div class="journal-title">Course Practical Submission</div>
+    </header>
+
+    <!-- Metadata Table -->
+    <table class="metadata-table">
+      <tr>
+        <td class="label">Course / Subject:</td>
+        <td class="value"><strong>{{ practical.subject }}</strong></td>
+        <td class="label">Practical No.:</td>
+        <td class="value"><strong>#{{ practical.practical_number or practical.id }}</strong></td>
+      </tr>
+      <tr>
+        <td class="label">Student Name:</td>
+        <td class="value">_________________________________</td>
+        <td class="label">Roll No. / PRN:</td>
+        <td class="value">______________________</td>
+      </tr>
+      <tr>
+        <td class="label">Language / Tool:</td>
+        <td class="value">{{ practical.language or 'Standard / C++' }}</td>
+        <td class="label">Date:</td>
+        <td class="value">______________________</td>
+      </tr>
+    </table>
+
+    <!-- Title & Problem Statement -->
+    <div class="doc-section">
+      <div class="doc-section-title">Experiment Title</div>
+      <div class="doc-section-body" style="font-weight:600; font-size:12pt; color:#000;">
+        {{ practical.title }}
+      </div>
+    </div>
+
+    <div class="doc-section">
+      <div class="doc-section-title">Problem Statement / Aim</div>
+      <div class="doc-section-body">
+{{ practical.question }}
+      </div>
+    </div>
+
+    <!-- Structured Sections -->
+    {% for key, meta in section_definitions.items() %}
+      {% if key in sections and sections[key].strip() %}
+        <div class="doc-section">
+          <div class="doc-section-title">{{ meta['title'] }}</div>
+          {% if key == 'code' %}
+            <pre class="code-listing">{{ sections[key] }}</pre>
+          {% elif key == 'output' %}
+            <pre class="code-listing" style="background:#f4f4f5; color:#18181b;">{{ sections[key] }}</pre>
+          {% else %}
+            <div class="doc-section-body">{{ sections[key] }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Faculty Assessment Box -->
+    <div class="faculty-box">
+      <div class="faculty-header">Faculty Evaluation & Grade</div>
+      <div class="faculty-grid">
+        <div class="faculty-cell">
+          <div class="cell-title">Performance (5)</div>
+          <div class="cell-val">____ / 5</div>
+        </div>
+        <div class="faculty-cell">
+          <div class="cell-title">Viva Voce (5)</div>
+          <div class="cell-val">____ / 5</div>
+        </div>
+        <div class="faculty-cell">
+          <div class="cell-title">Total Marks (10)</div>
+          <div class="cell-val">____ / 10</div>
+        </div>
+        <div class="faculty-cell">
+          <div class="cell-title">Faculty Signature</div>
+          <div class="cell-val" style="margin-top:20px;">_____________</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -308,3 +308,76 @@ class TestPracticalCRUD:
         # 8. Verify 404 after delete
         get_deleted = client.get(f"/api/practicals/{practical_id}")
         assert get_deleted.status_code == 404
+
+    def test_my_practicals_page_and_management(self, client):
+        # 1. Create two test practicals
+        p1_resp = client.post("/api/practicals", json={
+            "subject": "Data Structures",
+            "practical_number": "01",
+            "title": "Binary Search Tree",
+            "question": "Implement BST insertion and traversal",
+            "language": "C++",
+            "sections": {"aim": "BST aim", "code": "void insert() {}"},
+        })
+        p2_resp = client.post("/api/practicals", json={
+            "subject": "Web Development",
+            "practical_number": "02",
+            "title": "REST API with FastAPI",
+            "question": "Build endpoints for student CRUD",
+            "language": "Python",
+            "sections": {"aim": "FastAPI aim", "code": "from fastapi import FastAPI"},
+        })
+        id1 = p1_resp.json()["id"]
+        id2 = p2_resp.json()["id"]
+
+        # 2. Test /my-practicals HTML page rendering
+        page_resp = client.get("/my-practicals")
+        assert page_resp.status_code == 200
+        assert "text/html" in page_resp.headers["content-type"]
+        assert "My Practicals" in page_resp.text
+        assert "Binary Search Tree" in page_resp.text
+        assert "REST API with FastAPI" in page_resp.text
+
+        # 3. Test filtering by language
+        lang_filter = client.get("/api/practicals?language=Python")
+        assert lang_filter.status_code == 200
+        items = lang_filter.json()
+        assert any(i["id"] == id2 for i in items)
+        assert not any(i["id"] == id1 for i in items)
+
+        # 4. Test duplicate practical endpoint
+        dup_resp = client.post(f"/api/practicals/{id1}/duplicate")
+        assert dup_resp.status_code == 200
+        dup_data = dup_resp.json()
+        assert dup_data["success"] is True
+        dup_id = dup_data["id"]
+        assert dup_id != id1
+
+        dup_get = client.get(f"/api/practicals/{dup_id}").json()
+        assert "Binary Search Tree (Copy)" in dup_get["title"]
+
+        # 5. Test JSON export format
+        json_resp = client.get(f"/api/practicals/{id1}/export?format=json")
+        assert json_resp.status_code == 200
+        assert "application/json" in json_resp.headers["content-type"]
+        exported_json = json_resp.json()
+        assert exported_json["title"] == "Binary Search Tree"
+        assert exported_json["subject"] == "Data Structures"
+
+        # 6. Test Academic Printable Journal View
+        print_resp = client.get(f"/practicals/{id1}/print")
+        assert print_resp.status_code == 200
+        assert "text/html" in print_resp.headers["content-type"]
+        assert "Laboratory Record" in print_resp.text
+        assert "Binary Search Tree" in print_resp.text
+        assert "Faculty Evaluation" in print_resp.text
+
+        # 7. Test Batch Delete
+        batch_resp = client.post("/api/practicals/batch-delete", json={"ids": [id1, id2, dup_id]})
+        assert batch_resp.status_code == 200
+        assert batch_resp.json()["deleted_count"] >= 3
+
+        # Verify deletion
+        assert client.get(f"/api/practicals/{id1}").status_code == 404
+        assert client.get(f"/api/practicals/{id2}").status_code == 404
+        assert client.get(f"/api/practicals/{dup_id}").status_code == 404

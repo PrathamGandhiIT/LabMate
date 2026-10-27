@@ -59,6 +59,11 @@ class PracticalSaveRequest(BaseModel):
     sections: dict[str, str] = Field(default_factory=dict)
 
 
+class BatchDeleteRequest(BaseModel):
+    """Request to batch delete practicals."""
+    ids: list[int] = Field(..., min_length=1)
+
+
 class PracticalResponse(BaseModel):
     """A saved practical returned from the API."""
     id: int

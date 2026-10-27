@@ -110,12 +110,6 @@ async def viva_arena_page(request: Request):
     )
 
 
-@app.get("/my-practicals", response_class=HTMLResponse)
-async def my_practicals_page(request: Request):
-    return templates.TemplateResponse(
-        request, "my_practicals.html", {"page": "my-practicals"}
-    )
-
 
 # ---------------------------------------------------------------------------
 # Global error handler

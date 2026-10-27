@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import Practical
 from app.schemas import (
+    BatchDeleteRequest,
     PracticalGenerateRequest,
     PracticalSaveRequest,
     PracticalSectionRegenRequest,
@@ -71,6 +72,80 @@ async def practical_studio_page(request: Request, edit_id: Optional[int] = Query
             "page": "practical-studio",
             "section_definitions": SECTION_DEFINITIONS,
             "preloaded_practical": practical_data,
+        },
+    )
+
+
+@router.get("/my-practicals", response_class=HTMLResponse)
+async def my_practicals_page(
+    request: Request,
+    subject: Optional[str] = Query(None),
+    language: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+):
+    """Render the My Practicals management and library page."""
+    SessionLocal = request.app.state.db_session_factory
+    practicals_list = []
+    subjects_list = []
+    languages_list = []
+    try:
+        with SessionLocal() as session:
+            # Query distinct subjects
+            subj_rows = session.query(Practical.subject).distinct().all()
+            subjects_list = sorted([s[0] for s in subj_rows if s[0]])
+
+            # Query distinct languages
+            lang_rows = session.query(Practical.language).distinct().all()
+            languages_list = sorted([l[0] for l in lang_rows if l[0]])
+
+            query = session.query(Practical)
+            if subject and subject.strip():
+                query = query.filter(Practical.subject.ilike(f"%{subject.strip()}%"))
+            if language and language.strip() and language.lower() != "all":
+                query = query.filter(Practical.language.ilike(f"%{language.strip()}%"))
+            if search and search.strip():
+                term = f"%{search.strip()}%"
+                query = query.filter(
+                    (Practical.title.ilike(term))
+                    | (Practical.question.ilike(term))
+                    | (Practical.subject.ilike(term))
+                    | (Practical.language.ilike(term))
+                )
+
+            rows = query.order_by(Practical.updated_at.desc()).all()
+            for p in rows:
+                try:
+                    sections = json.loads(p.sections_json or "{}")
+                except Exception:
+                    sections = {}
+                practicals_list.append({
+                    "id": p.id,
+                    "subject": p.subject,
+                    "practical_number": p.practical_number,
+                    "title": p.title,
+                    "question": (p.question[:180] + "...") if p.question and len(p.question) > 180 else (p.question or ""),
+                    "language": p.language,
+                    "section_keys": list(sections.keys()),
+                    "section_count": len(sections),
+                    "created_at": p.created_at.strftime("%b %d, %Y") if p.created_at else "",
+                    "updated_at": p.updated_at.strftime("%b %d, %Y") if p.updated_at else "",
+                })
+    except Exception as exc:
+        logger.warning("Could not load practicals for library page: %s", exc)
+
+    return templates.TemplateResponse(
+        request,
+        "my_practicals.html",
+        {
+            "page": "my-practicals",
+            "practicals": practicals_list,
+            "subjects": subjects_list,
+            "languages": languages_list,
+            "active_subject": subject or "",
+            "active_language": language or "",
+            "search_query": search or "",
+            "total_count": len(practicals_list),
+            "section_definitions": SECTION_DEFINITIONS,
         },
     )
 
@@ -217,36 +292,64 @@ async def save_practical(request: Request, payload: PracticalSaveRequest):
 async def list_practicals(
     request: Request,
     subject: Optional[str] = Query(None),
+    language: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    sort: Optional[str] = Query("updated_desc"),
 ):
-    """List saved practicals with optional search and subject filter."""
+    """List saved practicals with optional search, subject, language, and sorting."""
     SessionLocal = request.app.state.db_session_factory
     try:
         with SessionLocal() as session:
             query = session.query(Practical)
-            if subject:
+            if subject and subject.strip():
                 query = query.filter(Practical.subject.ilike(f"%{subject.strip()}%"))
-            if search:
+            if language and language.strip() and language.lower() != "all":
+                query = query.filter(Practical.language.ilike(f"%{language.strip()}%"))
+            if search and search.strip():
                 search_term = f"%{search.strip()}%"
                 query = query.filter(
                     (Practical.title.ilike(search_term))
                     | (Practical.question.ilike(search_term))
                     | (Practical.subject.ilike(search_term))
+                    | (Practical.language.ilike(search_term))
                 )
 
-            rows = query.order_by(Practical.updated_at.desc()).all()
-            return [
-                {
+            # Sort
+            if sort == "updated_asc":
+                query = query.order_by(Practical.updated_at.asc())
+            elif sort == "created_desc":
+                query = query.order_by(Practical.created_at.desc())
+            elif sort == "created_asc":
+                query = query.order_by(Practical.created_at.asc())
+            elif sort == "title_asc":
+                query = query.order_by(Practical.title.asc())
+            elif sort == "subject_asc":
+                query = query.order_by(Practical.subject.asc())
+            elif sort == "number_asc":
+                query = query.order_by(Practical.practical_number.asc())
+            else:
+                query = query.order_by(Practical.updated_at.desc())
+
+            rows = query.all()
+            results = []
+            for p in rows:
+                try:
+                    sections = json.loads(p.sections_json or "{}")
+                except Exception:
+                    sections = {}
+                results.append({
                     "id": p.id,
                     "subject": p.subject,
                     "practical_number": p.practical_number,
                     "title": p.title,
+                    "question": (p.question[:180] + "...") if p.question and len(p.question) > 180 else (p.question or ""),
                     "language": p.language,
+                    "section_keys": list(sections.keys()),
+                    "section_count": len(sections),
                     "created_at": p.created_at.strftime("%Y-%m-%d %H:%M") if p.created_at else "",
                     "updated_at": p.updated_at.strftime("%Y-%m-%d %H:%M") if p.updated_at else "",
-                }
-                for p in rows
-            ]
+                })
+            return results
     except Exception as exc:
         logger.exception("Failed to list practicals: %s", exc)
         raise HTTPException(
@@ -352,17 +455,84 @@ async def delete_practical(request: Request, practical_id: int):
         ) from exc
 
 
+@router.post("/api/practicals/{practical_id}/duplicate")
+async def duplicate_practical(request: Request, practical_id: int):
+    """Duplicate an existing practical as a new draft."""
+    SessionLocal = request.app.state.db_session_factory
+    try:
+        with SessionLocal() as session:
+            p = session.query(Practical).filter(Practical.id == practical_id).first()
+            if not p:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Practical with ID {practical_id} not found.",
+                )
+            copy_num = f"{p.practical_number} (Copy)" if p.practical_number else None
+            copy_p = Practical(
+                subject=p.subject,
+                practical_number=copy_num,
+                title=f"{p.title} (Copy)",
+                question=p.question,
+                language=p.language,
+                sections_json=p.sections_json,
+            )
+            session.add(copy_p)
+            session.commit()
+            session.refresh(copy_p)
+            return {
+                "success": True,
+                "id": copy_p.id,
+                "title": copy_p.title,
+                "message": f"Successfully duplicated '{p.title}'!",
+            }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to duplicate practical %d: %s", practical_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/api/practicals/batch-delete")
+async def batch_delete_practicals(request: Request, payload: BatchDeleteRequest):
+    """Delete multiple practicals in one transaction."""
+    if not payload.ids:
+        return {"success": True, "deleted_count": 0}
+    SessionLocal = request.app.state.db_session_factory
+    try:
+        with SessionLocal() as session:
+            count = (
+                session.query(Practical)
+                .filter(Practical.id.in_(payload.ids))
+                .delete(synchronize_session=False)
+            )
+            session.commit()
+            return {
+                "success": True,
+                "deleted_count": count,
+                "message": f"Successfully deleted {count} practical(s).",
+            }
+    except Exception as exc:
+        logger.exception("Failed to batch delete practicals: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
 # ---------------------------------------------------------------------------
-# Exporting
+# Exporting & Academic Print View
 # ---------------------------------------------------------------------------
 
 @router.get("/api/practicals/{practical_id}/export")
 async def export_practical(
     request: Request,
     practical_id: int,
-    format: str = Query("markdown", pattern=r"^(markdown|txt)$"),
+    format: str = Query("markdown", pattern=r"^(markdown|txt|json)$"),
 ):
-    """Export a practical as a downloadable Markdown or plain text file."""
+    """Export a practical as a downloadable Markdown, plain text, or JSON file."""
     SessionLocal = request.app.state.db_session_factory
     try:
         with SessionLocal() as session:
@@ -375,11 +545,27 @@ async def export_practical(
 
             sections = json.loads(p.sections_json or "{}")
 
-            lines = []
-            if format == "markdown":
+            if format == "json":
+                export_data = {
+                    "id": p.id,
+                    "subject": p.subject,
+                    "practical_number": p.practical_number,
+                    "title": p.title,
+                    "question": p.question,
+                    "language": p.language,
+                    "sections": sections,
+                    "created_at": p.created_at.isoformat() if p.created_at else "",
+                    "updated_at": p.updated_at.isoformat() if p.updated_at else "",
+                }
+                content = json.dumps(export_data, indent=2)
+                filename = f"Practical_{p.practical_number or p.id}_{p.subject.replace(' ', '_')}.json"
+                media_type = "application/json; charset=utf-8"
+            elif format == "markdown":
                 title_prefix = f"Practical #{p.practical_number}: " if p.practical_number else ""
-                lines.append(f"# {title_prefix}{p.title}\n")
-                lines.append(f"**Subject:** {p.subject}  ")
+                lines = [
+                    f"# {title_prefix}{p.title}\n",
+                    f"**Subject:** {p.subject}  ",
+                ]
                 if p.language:
                     lines.append(f"**Language:** {p.language}  ")
                 lines.append(f"\n### Problem Statement\n{p.question}\n\n---\n")
@@ -394,10 +580,12 @@ async def export_practical(
                 media_type = "text/markdown; charset=utf-8"
             else:
                 title_prefix = f"Practical #{p.practical_number}: " if p.practical_number else ""
-                lines.append("=" * 60)
-                lines.append(f"{title_prefix}{p.title}".center(60))
-                lines.append("=" * 60)
-                lines.append(f"Subject: {p.subject}")
+                lines = [
+                    "=" * 60,
+                    f"{title_prefix}{p.title}".center(60),
+                    "=" * 60,
+                    f"Subject: {p.subject}",
+                ]
                 if p.language:
                     lines.append(f"Language: {p.language}")
                 lines.append(f"\nProblem Statement:\n{p.question}\n")
@@ -422,6 +610,38 @@ async def export_practical(
         raise
     except Exception as exc:
         logger.exception("Failed to export practical %d: %s", practical_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get("/practicals/{practical_id}/print", response_class=HTMLResponse)
+async def print_practical_view(request: Request, practical_id: int):
+    """Render a formal academic laboratory record for clean printing / PDF export."""
+    SessionLocal = request.app.state.db_session_factory
+    try:
+        with SessionLocal() as session:
+            p = session.query(Practical).filter(Practical.id == practical_id).first()
+            if not p:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Practical not found",
+                )
+            sections = json.loads(p.sections_json or "{}")
+            return templates.TemplateResponse(
+                request,
+                "practical_print.html",
+                {
+                    "practical": p,
+                    "sections": sections,
+                    "section_definitions": SECTION_DEFINITIONS,
+                },
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to render print view for %d: %s", practical_id, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
