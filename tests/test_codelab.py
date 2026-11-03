@@ -156,3 +156,9 @@ class TestCodeSnippetCRUD:
         # 5. Verify deleted (404)
         not_found_resp = client.get(f"/api/codelab/snippets/{snippet_id}")
         assert not_found_resp.status_code == 404
+
+    def test_codelab_markdown_code_block_stash(self, client):
+        page = client.get("/code-lab")
+        assert page.status_code == 200
+        assert "%%CODE_BLOCK_" in page.text
+        assert "Restore stashed code blocks" in page.text

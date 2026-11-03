@@ -684,9 +684,12 @@ function renderMarkdownResult(md) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Code blocks: ```lang ... ```
+  // Extract and stash code blocks so markdown formatting rules don't mutate code contents
+  const codeBlocks = [];
   html = html.replace(/```([a-zA-Z0-9_\-\+]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    return `<div class="code-box my-sm"><div class="code-box-header"><span>${lang || 'code'}</span><button class="btn btn--secondary btn--sm" style="padding: 2px 6px;" onclick="copyCodeSnippet(this)">Copy</button></div><pre><code>${code.trim()}</code></pre></div>`;
+    const placeholder = `%%CODE_BLOCK_${codeBlocks.length}%%`;
+    codeBlocks.push(`<div class="code-box my-sm"><div class="code-box-header"><span>${lang || 'code'}</span><button class="btn btn--secondary btn--sm" style="padding: 2px 6px;" onclick="copyCodeSnippet(this)">Copy</button></div><pre><code>${code.trim()}</code></pre></div>`);
+    return placeholder;
   });
 
   // Inline code: `...`
@@ -713,11 +716,16 @@ function renderMarkdownResult(md) {
   html = html.split('\n\n').map(chunk => {
     chunk = chunk.trim();
     if (!chunk) return '';
-    if (chunk.startsWith('<h') || chunk.startsWith('<div') || chunk.startsWith('<ul') || chunk.startsWith('<table')) {
+    if (chunk.startsWith('<h') || chunk.startsWith('<div') || chunk.startsWith('<ul') || chunk.startsWith('<table') || chunk.startsWith('%%CODE_BLOCK_')) {
       return chunk;
     }
     return `<p>${chunk.replace(/\n/g, '<br>')}</p>`;
   }).join('');
+
+  // Restore stashed code blocks
+  codeBlocks.forEach((block, idx) => {
+    html = html.replace(new RegExp(`%%CODE_BLOCK_${idx}%%`, 'g'), block);
+  });
 
   container.innerHTML = html;
 }
