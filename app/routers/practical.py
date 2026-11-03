@@ -129,6 +129,7 @@ async def my_practicals_page(
                     "section_count": len(sections),
                     "created_at": p.created_at.strftime("%b %d, %Y") if p.created_at else "",
                     "updated_at": p.updated_at.strftime("%b %d, %Y") if p.updated_at else "",
+                    "updated_at_iso": p.updated_at.isoformat() if p.updated_at else "",
                 })
     except Exception as exc:
         logger.warning("Could not load practicals for library page: %s", exc)

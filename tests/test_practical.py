@@ -381,3 +381,18 @@ class TestPracticalCRUD:
         assert client.get(f"/api/practicals/{id1}").status_code == 404
         assert client.get(f"/api/practicals/{id2}").status_code == 404
         assert client.get(f"/api/practicals/{dup_id}").status_code == 404
+
+    def test_my_practicals_date_sorting_attributes(self, client):
+        resp = client.post("/api/practicals", json={
+            "subject": "Math",
+            "title": "Fourier Transform",
+            "question": "Compute FFT",
+            "sections": {"aim": "FFT aim"},
+        })
+        assert resp.status_code == 200
+
+        page = client.get("/my-practicals")
+        assert page.status_code == 200
+        # data-updated attribute must contain ISO timestamp format (e.g. 2026-...)
+        import re
+        assert re.search(r'data-updated="\d{4}-\d{2}-\d{2}T', page.text) is not None

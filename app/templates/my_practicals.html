@@ -122,7 +122,7 @@
       data-language="{{ p.language or '' }}"
       data-title="{{ p.title }}"
       data-number="{{ p.practical_number or '' }}"
-      data-updated="{{ p.updated_at }}"
+      data-updated="{{ p.updated_at_iso or p.updated_at }}"
     >
       <div class="practical-card__top">
         <input
@@ -212,7 +212,7 @@
           data-language="{{ p.language or '' }}"
           data-title="{{ p.title }}"
           data-number="{{ p.practical_number or '' }}"
-          data-updated="{{ p.updated_at }}"
+          data-updated="{{ p.updated_at_iso or p.updated_at }}"
         >
           <td>
             <input type="checkbox" class="practical-card__checkbox item-checkbox" data-id="{{ p.id }}" />
