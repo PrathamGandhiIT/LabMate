@@ -705,9 +705,9 @@ function renderMarkdownResult(md) {
   // Tables
   html = renderMarkdownTables(html);
 
-  // Unordered lists
+  // Unordered lists (wrap only contiguous <li> elements)
   html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  html = html.replace(/(?:<li>.*?<\/li>\s*)+/gs, (match) => `<ul>${match}</ul>`);
 
   // Paragraphs
   html = html.split('\n\n').map(chunk => {
