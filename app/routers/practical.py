@@ -467,7 +467,7 @@ async def duplicate_practical(request: Request, practical_id: int):
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Practical with ID {practical_id} not found.",
                 )
-            copy_num = f"{p.practical_number} (Copy)" if p.practical_number else None
+            copy_num = f"{p.practical_number[:13]} (Copy)" if p.practical_number else None
             copy_p = Practical(
                 subject=p.subject,
                 practical_number=copy_num,

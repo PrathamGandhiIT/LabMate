@@ -381,3 +381,31 @@ class TestPracticalCRUD:
         assert client.get(f"/api/practicals/{id1}").status_code == 404
         assert client.get(f"/api/practicals/{id2}").status_code == 404
         assert client.get(f"/api/practicals/{dup_id}").status_code == 404
+
+    def test_duplicate_practical_number_length_constraint(self, client):
+        resp = client.post("/api/practicals", json={
+            "subject": "Networking",
+            "practical_number": "Practical 12345",
+            "title": "Socket Programming",
+            "question": "Write socket code",
+            "sections": {"aim": "Socket aim"},
+        })
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+
+        dup_resp = client.post(f"/api/practicals/{pid}/duplicate")
+        assert dup_resp.status_code == 200
+        dup_id = dup_resp.json()["id"]
+
+        dup_data = client.get(f"/api/practicals/{dup_id}").json()
+        assert len(dup_data["practical_number"]) <= 20
+
+        update_resp = client.put(f"/api/practicals/{dup_id}", json={
+            "subject": dup_data["subject"],
+            "practical_number": dup_data["practical_number"],
+            "title": dup_data["title"],
+            "question": dup_data["question"],
+            "language": dup_data["language"],
+            "sections": dup_data["sections"],
+        })
+        assert update_resp.status_code == 200
