@@ -381,3 +381,21 @@ class TestPracticalCRUD:
         assert client.get(f"/api/practicals/{id1}").status_code == 404
         assert client.get(f"/api/practicals/{id2}").status_code == 404
         assert client.get(f"/api/practicals/{dup_id}").status_code == 404
+
+    def test_export_filename_sanitization(self, client):
+        resp = client.post("/api/practicals", json={
+            "subject": 'CS/IT: "Advanced" Algorithms',
+            "practical_number": "PR#01/A",
+            "title": "Graph Traversal",
+            "question": "Implement BFS",
+            "sections": {"aim": "BFS aim"},
+        })
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+
+        export_resp = client.get(f"/api/practicals/{pid}/export?format=markdown")
+        assert export_resp.status_code == 200
+        cd = export_resp.headers["content-disposition"]
+        # Filename must not contain slashes or inner unescaped quotes
+        assert "/" not in cd.split('filename="')[1]
+        assert '"' not in cd.split('filename="')[1].rstrip('"')

@@ -10,6 +10,7 @@ Handles:
 
 import json
 import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
@@ -545,6 +546,10 @@ async def export_practical(
 
             sections = json.loads(p.sections_json or "{}")
 
+            safe_subject = re.sub(r"[^\w\-]", "_", p.subject)
+            safe_pr_num = re.sub(r"[^\w\-]", "_", p.practical_number) if p.practical_number else str(p.id)
+            base_filename = f"Practical_{safe_pr_num}_{safe_subject}"
+
             if format == "json":
                 export_data = {
                     "id": p.id,
@@ -558,7 +563,7 @@ async def export_practical(
                     "updated_at": p.updated_at.isoformat() if p.updated_at else "",
                 }
                 content = json.dumps(export_data, indent=2)
-                filename = f"Practical_{p.practical_number or p.id}_{p.subject.replace(' ', '_')}.json"
+                filename = f"{base_filename}.json"
                 media_type = "application/json; charset=utf-8"
             elif format == "markdown":
                 title_prefix = f"Practical #{p.practical_number}: " if p.practical_number else ""
@@ -576,7 +581,7 @@ async def export_practical(
                         lines.append(f"{sections[key]}\n\n")
 
                 content = "\n".join(lines)
-                filename = f"Practical_{p.practical_number or p.id}_{p.subject.replace(' ', '_')}.md"
+                filename = f"{base_filename}.md"
                 media_type = "text/markdown; charset=utf-8"
             else:
                 title_prefix = f"Practical #{p.practical_number}: " if p.practical_number else ""
@@ -598,7 +603,7 @@ async def export_practical(
                         lines.append("\n" + "-" * 40 + "\n")
 
                 content = "\n".join(lines)
-                filename = f"Practical_{p.practical_number or p.id}_{p.subject.replace(' ', '_')}.txt"
+                filename = f"{base_filename}.txt"
                 media_type = "text/plain; charset=utf-8"
 
             return Response(
