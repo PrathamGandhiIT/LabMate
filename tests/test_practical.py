@@ -381,3 +381,17 @@ class TestPracticalCRUD:
         assert client.get(f"/api/practicals/{id1}").status_code == 404
         assert client.get(f"/api/practicals/{id2}").status_code == 404
         assert client.get(f"/api/practicals/{dup_id}").status_code == 404
+
+    def test_delete_practical_with_apostrophe_title(self, client):
+        resp = client.post("/api/practicals", json={
+            "subject": "Algorithms",
+            "title": "Dijkstra's Algorithm & Prim's MST",
+            "question": "Find shortest path",
+            "sections": {"aim": "Shortest path"},
+        })
+        assert resp.status_code == 200
+        pid = resp.json()["id"]
+
+        page = client.get("/my-practicals")
+        assert page.status_code == 200
+        assert f"confirmDeleteSingle({pid})" in page.text

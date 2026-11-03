@@ -180,7 +180,7 @@
             </div>
           </div>
 
-          <button class="action-icon-btn action-icon-btn--danger" onclick="confirmDeleteSingle({{ p.id }}, '{{ p.title|escape }}')" title="Delete practical">🗑️</button>
+          <button class="action-icon-btn action-icon-btn--danger" onclick="confirmDeleteSingle({{ p.id }})" title="Delete practical">🗑️</button>
         </div>
       </div>
     </div>
@@ -243,7 +243,7 @@
               <a href="/practical-studio?edit_id={{ p.id }}" class="action-icon-btn" title="Edit">✏️</a>
               <a href="/practicals/{{ p.id }}/print" target="_blank" class="action-icon-btn" title="Print / PDF">🖨️</a>
               <button class="action-icon-btn" onclick="duplicatePractical({{ p.id }})" title="Duplicate">📑</button>
-              <button class="action-icon-btn action-icon-btn--danger" onclick="confirmDeleteSingle({{ p.id }}, '{{ p.title|escape }}')" title="Delete">🗑️</button>
+              <button class="action-icon-btn action-icon-btn--danger" onclick="confirmDeleteSingle({{ p.id }})" title="Delete">🗑️</button>
             </div>
           </td>
         </tr>
@@ -766,8 +766,10 @@ async function executeBatchDelete() {
 // Single Item CRUD Operations
 // ---------------------------------------------------------------------
 
-function confirmDeleteSingle(id, title) {
+function confirmDeleteSingle(id) {
   pendingDeleteId = id;
+  const card = document.getElementById(`card-${id}`) || document.getElementById(`row-${id}`);
+  const title = card?.dataset.title || `Practical #${id}`;
   document.getElementById('delete-item-title').textContent = `"${title}"`;
   document.getElementById('delete-confirm-modal').classList.add('open');
 }
