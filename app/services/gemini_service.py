@@ -115,9 +115,12 @@ class GeminiService:
 
         # Step 1: Can we reach the API and is the model available?
         try:
-            loop = asyncio.get_event_loop()
-            models_response = await loop.run_in_executor(
-                None, lambda: list(self._client.models.list())
+            loop = asyncio.get_running_loop()
+            models_response = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None, lambda: list(self._client.models.list())
+                ),
+                timeout=10.0,
             )
             result["api_reachable"] = True
 
@@ -152,9 +155,12 @@ class GeminiService:
         if not self._client:
             return False
         try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None, lambda: list(self._client.models.list())
+            loop = asyncio.get_running_loop()
+            await asyncio.wait_for(
+                loop.run_in_executor(
+                    None, lambda: list(self._client.models.list())
+                ),
+                timeout=10.0,
             )
             return True
         except Exception:
@@ -231,14 +237,17 @@ class GeminiService:
                     len(contents),
                     max_tokens,
                 )
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(
-                    None,
-                    lambda: self._client.models.generate_content(
-                        model=settings.gemini_model,
-                        contents=contents,
-                        config=config,
+                loop = asyncio.get_running_loop()
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: self._client.models.generate_content(
+                            model=settings.gemini_model,
+                            contents=contents,
+                            config=config,
+                        ),
                     ),
+                    timeout=float(settings.gemini_timeout),
                 )
             except asyncio.TimeoutError as exc:
                 raise GeminiTimeoutError(

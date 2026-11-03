@@ -156,3 +156,20 @@ class TestCodeSnippetCRUD:
         # 5. Verify deleted (404)
         not_found_resp = client.get(f"/api/codelab/snippets/{snippet_id}")
         assert not_found_resp.status_code == 404
+
+    def test_analysis_timeout_handling(self, client, monkeypatch):
+        from app.services.gemini_service import GeminiService, GeminiTimeoutError
+
+        async def mock_chat_timeout(self, messages, **kwargs):
+            raise GeminiTimeoutError("Generation timed out after 120s.")
+
+        monkeypatch.setattr(GeminiService, "chat", mock_chat_timeout)
+
+        payload = {
+            "code": "for i in range(100): pass",
+            "language": "python",
+            "mode": "explain",
+        }
+        resp = client.post("/api/codelab/analyze", json=payload)
+        assert resp.status_code == 504
+        assert "timed out" in resp.json()["detail"].lower()
