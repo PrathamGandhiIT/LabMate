@@ -534,7 +534,7 @@ function formatSectionContent(key, text) {
       <div class="code-box">
         <div class="code-box-header">
           <span>${escapeHtml(currentPractical.language || 'Code')}</span>
-          <button type="button" class="btn btn--ghost btn--sm" style="padding: 2px 8px; font-size: 11px;" onclick="copyToClipboard(decodeURIComponent('${encodeURIComponent(codeText)}'))">Copy Code</button>
+          <button type="button" class="btn btn--ghost btn--sm" style="padding: 2px 8px; font-size: 11px;" onclick="copyCodeBlock(this)">Copy Code</button>
         </div>
         <pre><code>${escapeHtml(codeText)}</code></pre>
       </div>
@@ -750,6 +750,15 @@ async function saveCurrentPractical() {
     Toast.error(err.message || 'Failed to save practical');
   } finally {
     setLoading(saveBtn, false, '💾 Save Practical');
+  }
+}
+
+// Copy code block directly from DOM
+function copyCodeBlock(btn) {
+  const codeBox = btn.closest('.code-box');
+  const codeEl = codeBox ? codeBox.querySelector('pre code') : null;
+  if (codeEl) {
+    copyToClipboard(codeEl.textContent);
   }
 }
 

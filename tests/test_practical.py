@@ -437,3 +437,9 @@ class TestPracticalCRUD:
         assert page.status_code == 200
         assert f"/practicals/{pid}/print" in page.text
         assert f"/practicals({pid})/print" not in page.text
+
+    def test_practical_studio_copy_code_block(self, client):
+        page = client.get("/practical-studio")
+        assert page.status_code == 200
+        assert "copyCodeBlock(this)" in page.text
+        assert "function copyCodeBlock(btn)" in page.text
