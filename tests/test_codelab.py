@@ -156,3 +156,27 @@ class TestCodeSnippetCRUD:
         # 5. Verify deleted (404)
         not_found_resp = client.get(f"/api/codelab/snippets/{snippet_id}")
         assert not_found_resp.status_code == 404
+
+    def test_snippet_with_html_tags_and_quotes(self, client):
+        payload = {
+            "title": "<script>alert('xss')</script> vector<int>",
+            "language": "cpp",
+            "code": "vector<int> v = {1, 2, 3};",
+            "notes": "Testing <tags> & 'quotes'",
+        }
+        resp = client.post("/api/codelab/snippets", json=payload)
+        assert resp.status_code == 200
+        sid = resp.json()["id"]
+
+        get_resp = client.get(f"/api/codelab/snippets/{sid}")
+        assert get_resp.status_code == 200
+        data = get_resp.json()
+        assert data["title"] == "<script>alert('xss')</script> vector<int>"
+
+        # Verify codelab page includes escapeHtml function to prevent XSS
+        page = client.get("/code-lab")
+        assert page.status_code == 200
+        assert "function escapeHtml(text)" in page.text
+
+        # Clean up
+        client.delete(f"/api/codelab/snippets/{sid}")

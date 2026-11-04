@@ -852,6 +852,16 @@ function closeSnippetsModal() {
   document.getElementById('modal-list-snippets').classList.remove('open');
 }
 
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 async function refreshSnippetsList() {
   try {
     const resp = await fetch('/api/codelab/snippets');
@@ -867,11 +877,11 @@ async function refreshSnippetsList() {
             <div class="viva-item flex items-center justify-between" id="snippet-row-${s.id}">
               <div>
                 <div style="font-weight: var(--weight-semibold); color: var(--text-primary); font-size: var(--text-sm);">
-                  ${s.title}
+                  ${escapeHtml(s.title)}
                 </div>
                 <div style="font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;">
-                  <span class="badge badge--sm badge--lime" style="font-size: 0.65rem;">${s.language.toUpperCase()}</span>
-                  ${s.notes ? ` • ${s.notes.substring(0, 45)}` : ''}
+                  <span class="badge badge--sm badge--lime" style="font-size: 0.65rem;">${escapeHtml(s.language).toUpperCase()}</span>
+                  ${s.notes ? ` • ${escapeHtml(s.notes.substring(0, 45))}` : ''}
                 </div>
               </div>
               <div class="flex gap-xs">
