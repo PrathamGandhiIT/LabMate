@@ -163,13 +163,17 @@ const Sidebar = {
 
     toggle.addEventListener('click', () => {
       sidebar.classList.toggle('open');
-      if (overlay) overlay.classList.toggle('active');
+      if (overlay) {
+        overlay.classList.toggle('active');
+        overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+      }
     });
 
     if (overlay) {
       overlay.addEventListener('click', () => {
         sidebar.classList.remove('open');
         overlay.classList.remove('active');
+        overlay.style.display = 'none';
       });
     }
 
@@ -177,7 +181,10 @@ const Sidebar = {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && sidebar.classList.contains('open')) {
         sidebar.classList.remove('open');
-        if (overlay) overlay.classList.remove('active');
+        if (overlay) {
+          overlay.classList.remove('active');
+          overlay.style.display = 'none';
+        }
       }
     });
   }

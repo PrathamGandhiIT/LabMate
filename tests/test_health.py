@@ -95,6 +95,11 @@ class TestDashboardContent:
         resp = client.get("/")
         assert "ai-status-dot" in resp.text
 
+    def test_sidebar_overlay_script(self, client):
+        resp = client.get("/static/js/app.js")
+        assert resp.status_code == 200
+        assert "overlay.style.display" in resp.text
+
 
 class TestErrorHandlers:
     """Test global 404 and 500 error handlers for API vs HTML responses (BUG-001)."""
