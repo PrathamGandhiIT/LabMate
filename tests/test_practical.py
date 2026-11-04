@@ -437,3 +437,9 @@ class TestPracticalCRUD:
         assert page.status_code == 200
         assert f"/practicals/{pid}/print" in page.text
         assert f"/practicals({pid})/print" not in page.text
+
+    def test_my_practicals_preview_copy_helper(self, client):
+        page = client.get("/my-practicals")
+        assert page.status_code == 200
+        assert "copyModalSection(this)" in page.text
+        assert "function copyModalSection(btn)" in page.text

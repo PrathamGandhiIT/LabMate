@@ -856,7 +856,7 @@ async function openPreview(id) {
       <div class="preview-section-block">
         <div class="preview-section-header">
           <span class="preview-section-title">Problem Statement</span>
-          <button class="copy-mini-btn" onclick="copyText(${JSON.stringify(p.question)})">Copy</button>
+          <button class="copy-mini-btn" onclick="copyModalSection(this)">Copy</button>
         </div>
         <div class="preview-section-content" style="color:var(--text-primary); font-weight:500;">${escapeHtml(p.question)}</div>
       </div>
@@ -873,7 +873,7 @@ async function openPreview(id) {
           <div class="preview-section-block">
             <div class="preview-section-header">
               <span class="preview-section-title">${title}</span>
-              <button class="copy-mini-btn" onclick="copyText(${JSON.stringify(content)})">Copy ${isCode ? 'Code' : 'Section'}</button>
+              <button class="copy-mini-btn" onclick="copyModalSection(this)">Copy ${isCode ? 'Code' : 'Section'}</button>
             </div>
             ${
               isCode
@@ -927,6 +927,14 @@ function toggleModalExportMenu(e) {
 
 function closeAllDropdowns() {
   document.querySelectorAll('.action-dropdown-menu').forEach(m => m.classList.remove('open'));
+}
+
+function copyModalSection(btn) {
+  const block = btn.closest('.preview-section-block');
+  const target = block ? block.querySelector('.preview-code-block, .preview-section-content') : null;
+  if (target) {
+    copyText(target.textContent);
+  }
 }
 
 function copyText(str) {
